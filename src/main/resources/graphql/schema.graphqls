@@ -75,11 +75,18 @@ type Mutation {
   createMediaRecord(input: CreateMediaRecordInput!): MediaRecord!
   # Updates an existing media record with the given UUID
   updateMediaRecord(input: UpdateMediaRecordInput!): MediaRecord!
-    # Deletes the media record with the given UUID
+  # Deletes the media record with the given UUID
   deleteMediaRecord(id: UUID!): UUID!
   # Creates a new upload URL for the given media record
   createStorageUploadUrl(input: CreateUrlInput): UploadUrl
   # Creates a new download URL for the given media record
   createStorageDownloadUrl(input: CreateUrlInput): DownloadUrl
+
+  """
+  Logs that a media content has been learned by a user.
+  Publishes an event that other services can subscribe to.
+  See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
+  """
+  logMediaContentLearned(contentId: UUID!): MediaRecord!
 }
 
