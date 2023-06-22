@@ -1,6 +1,5 @@
 package de.unistuttgart.iste.gits.media_service.dapr;
 
-import de.unistuttgart.iste.gits.common.dapr.CourseAssociationDTO;
 import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
 import de.unistuttgart.iste.gits.common.dapr.ResourceUpdateDTO;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;

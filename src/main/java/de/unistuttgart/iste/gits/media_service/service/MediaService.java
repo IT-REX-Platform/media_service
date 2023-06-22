@@ -24,6 +24,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MediaService {
 
+    public static final String BUCKET_ID = "bucketId";
+    public static final String NOT_FOUND = " not found.";
+    public static final String FILENAME = "filename";
+    public static final String MEDIA_RECORD_WITH_ID = "Media record with id ";
     private final MinioClient minioClient;
 
     /**
@@ -73,7 +77,7 @@ public class MediaService {
             List<UUID> missingIds = new ArrayList<>(ids);
             missingIds.removeAll(records.stream().map(MediaRecordEntity::getId).toList());
 
-            throw new EntityNotFoundException("Media record(s) with id(s) " + missingIds.stream().map(UUID::toString).collect(Collectors.joining(", ")) + " not found.");
+            throw new EntityNotFoundException("Media record(s) with id(s) " + missingIds.stream().map(UUID::toString).collect(Collectors.joining(", ")) + NOT_FOUND);
         }
 
         return records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
@@ -140,10 +144,10 @@ public class MediaService {
     public UUID deleteMediaRecord(UUID id) {
         Optional<MediaRecordEntity> entity = repository.findById(id);
         Map<String, String> minioVariables = createMinIOVariables(id);
-        String bucketId = minioVariables.get("bucketId");
-        String filename = minioVariables.get("filename");
+        String bucketId = minioVariables.get(BUCKET_ID);
+        String filename = minioVariables.get(FILENAME);
 
-        repository.delete(entity.orElseThrow(() -> new EntityNotFoundException("Media record with id " + id + " not found.")));
+        repository.delete(entity.orElseThrow(() -> new EntityNotFoundException(MEDIA_RECORD_WITH_ID + id + NOT_FOUND)));
 
         minioClient.removeObject(
                 RemoveObjectArgs
@@ -153,7 +157,9 @@ public class MediaService {
                         .build());
 
         //publish changes
-        topicPublisher.notifyChange(entity.get(), CrudOperation.DELETE);
+        if (entity.isPresent()){
+            topicPublisher.notifyChange(entity.get(), CrudOperation.DELETE);
+        }
         return id;
     }
 
@@ -166,7 +172,7 @@ public class MediaService {
      */
     public MediaRecord updateMediaRecord(UpdateMediaRecordInput input) {
         if (!repository.existsById(input.getId())) {
-            throw new EntityNotFoundException("Media record with id " + input.getId() + " not found.");
+            throw new EntityNotFoundException(MEDIA_RECORD_WITH_ID + input.getId() + NOT_FOUND);
         }
 
         MediaRecordEntity entity = repository.save(modelMapper.map(input, MediaRecordEntity.class));
@@ -186,8 +192,8 @@ public class MediaService {
     @SneakyThrows
     public UploadUrl createUploadUrl(CreateUrlInput input) {
         Map<String, String> variables = createMinIOVariables(input.getId());
-        String bucketId = variables.get("bucketId");
-        String filename = variables.get("filename");
+        String bucketId = variables.get(BUCKET_ID);
+        String filename = variables.get(FILENAME);
 
         // Ensures that the Bucket exists or creates a new one otherwise. Weirdly this only works if at least one bucket already exists.
         boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
@@ -216,8 +222,8 @@ public class MediaService {
     @SneakyThrows
     public DownloadUrl createDownloadUrl(CreateUrlInput input) {
         Map<String, String> variables = createMinIOVariables(input.getId());
-        String bucketId = variables.get("bucketId");
-        String filename = variables.get("filename");
+        String bucketId = variables.get(BUCKET_ID);
+        String filename = variables.get(FILENAME);
 
 
         String url = minioClient.getPresignedObjectUrl(
@@ -240,16 +246,16 @@ public class MediaService {
         Map<String, String> variables = new HashMap<>();
 
         if (!repository.existsById(input)) {
-            throw new EntityNotFoundException("Media record with id " + input + " not found.");
+            throw new EntityNotFoundException(MEDIA_RECORD_WITH_ID + input + NOT_FOUND);
         }
 
         Optional<MediaRecordEntity> entity = repository.findById(input);
 
         if (entity.isPresent()) {
             String filename = entity.get().getId().toString();
-            variables.put("filename", filename);
+            variables.put(FILENAME, filename);
             String bucketId = entity.get().getType().toString().toLowerCase();
-            variables.put("bucketId", bucketId);
+            variables.put(BUCKET_ID, bucketId);
         }
 
         return variables;
