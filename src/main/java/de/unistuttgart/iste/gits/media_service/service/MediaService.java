@@ -1,6 +1,8 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
+import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
 import de.unistuttgart.iste.gits.generated.dto.*;
+import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import io.minio.*;
@@ -33,10 +35,16 @@ public class MediaService {
      */
     private final ModelMapper modelMapper;
 
-    public MediaService(MediaRecordRepository mediaRecordRepository, ModelMapper modelMapper, MinioClient minioClient) {
+    /**
+     * dapr topic publisher
+     */
+    private final TopicPublisher topicPublisher;
+
+    public MediaService(MediaRecordRepository mediaRecordRepository, ModelMapper modelMapper, MinioClient minioClient, TopicPublisher topicPublisher) {
         this.repository = mediaRecordRepository;
         this.modelMapper = modelMapper;
         this.minioClient = minioClient;
+        this.topicPublisher = topicPublisher;
     }
 
     /**
@@ -114,6 +122,9 @@ public class MediaService {
 
         repository.save(entity);
 
+        //publish changes
+        topicPublisher.notifyChange(entity, CrudOperation.CREATE);
+
         return modelMapper.map(entity, MediaRecord.class);
     }
 
@@ -141,6 +152,8 @@ public class MediaService {
                         .object(filename)
                         .build());
 
+        //publish changes
+        topicPublisher.notifyChange(entity.get(), CrudOperation.DELETE);
         return id;
     }
 
@@ -158,9 +171,10 @@ public class MediaService {
 
         MediaRecordEntity entity = repository.save(modelMapper.map(input, MediaRecordEntity.class));
 
-        MediaRecordEntity updatedRecord = repository.save(entity);
+        //publish changes
+        topicPublisher.notifyChange(entity, CrudOperation.UPDATE);
 
-        return modelMapper.map(updatedRecord, MediaRecord.class);
+        return modelMapper.map(entity, MediaRecord.class);
     }
 
     /**
