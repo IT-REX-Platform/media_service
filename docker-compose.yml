@@ -41,19 +41,6 @@ services:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=media_service
-  testDb:
-    image: postgres:alpine
-    restart: always
-    expose:
-      - 3033
-    ports:
-      - "3033:5432"
-    volumes:
-      - testdata:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=test_data
   app-media:
     build:
       context: ./../media_service/ # necessary because otherwise docker-compose overrides the context when merging multiple docker-compose.yml files
