@@ -13,6 +13,24 @@ type MediaRecord {
   type: MediaType!
   # IDs of the MediaContents this media record is associated with
   contentIds: [UUID!]!
+
+  """
+  The progress data of the given user for this medium.
+  """
+  userProgressData(userId: UUID!): MediaRecordProgressData!
+}
+
+type MediaRecordProgressData {
+
+  """
+  Whether the medium has been worked on by the user.
+  """
+  workedOn: Boolean!
+  """
+  Date on which the medium was worked on by the user.
+  This is null if the medium has not been worked on by the user.
+  """
+  dateWorkedOn: DateTime
 }
 
 input CreateMediaRecordInput {
@@ -83,10 +101,10 @@ type Mutation {
   createStorageDownloadUrl(input: CreateUrlInput): DownloadUrl
 
   """
-  Logs that a media content has been learned by a user.
+  Logs that a media has been worked on by a user.
   Publishes an event that other services can subscribe to.
   See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
   """
-  logMediaContentLearned(contentId: UUID!): MediaRecord!
+  logMediaRecordLearned(userId: UUID!, mediaRecordId: UUID!): MediaRecord!
 }
 
