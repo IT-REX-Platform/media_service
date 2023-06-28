@@ -1,6 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.config;
 
 import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
+import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +20,7 @@ public class DevTopicPublisherConfiguration {
         return new MockTopicPublisher();
     }
 
-    @Slf4j
-    static class MockTopicPublisher extends TopicPublisher {
+    private static class MockTopicPublisher extends TopicPublisher {
 
         public MockTopicPublisher() {
             super(null);
@@ -29,6 +29,11 @@ public class DevTopicPublisherConfiguration {
         @Override
         public void notifyChange(MediaRecordEntity mediaRecordEntity, CrudOperation operation) {
             log.info("notifyChange called with {} and {}", mediaRecordEntity, operation);
+        }
+
+        @Override
+        public void notifyUserWorkedOnContent(UserProgressLogEvent userProgressLogEvent) {
+            log.info("notifyUserWorkedOnContent called with {}", userProgressLogEvent);
         }
     }
 }

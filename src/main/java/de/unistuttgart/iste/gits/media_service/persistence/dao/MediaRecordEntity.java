@@ -1,16 +1,11 @@
 package de.unistuttgart.iste.gits.media_service.persistence.dao;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Past;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.Length;
 
-import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +30,11 @@ public class MediaRecordEntity {
 
     @ElementCollection
     private List<UUID> contentIds;
+
+    @OneToMany(mappedBy = "primaryKey.mediaRecordId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    private List<MediaRecordProgressDataEntity> progressData = new ArrayList<>();
 
     public enum MediaType {
         AUDIO,

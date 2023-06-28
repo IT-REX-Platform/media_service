@@ -2,6 +2,7 @@ package de.unistuttgart.iste.gits.media_service.dapr;
 
 import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
 import de.unistuttgart.iste.gits.common.dapr.ResourceUpdateDTO;
+import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import io.dapr.client.DaprClient;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 public class TopicPublisher {
 
     private static final String PUBSUB_NAME = "gits";
-    private static final String TOPIC_NAME = "resource-update";
+    private static final String RESOURCE_UPDATE_TOPIC = "resource-update";
+
+    private static final String USER_PROGRESS_LOG_TOPIC = "content-progressed";
 
     private final DaprClient client;
 
@@ -27,10 +30,10 @@ public class TopicPublisher {
      * @param dto message
      */
     private void publishChanges(ResourceUpdateDTO dto) {
-        log.info("publishing message");
+        log.debug("publishing message");
         client.publishEvent(
                 PUBSUB_NAME,
-                TOPIC_NAME,
+                RESOURCE_UPDATE_TOPIC,
                 dto).block();
     }
 
@@ -49,5 +52,13 @@ public class TopicPublisher {
         publishChanges(dto);
     }
 
+    /**
+     * Publishes a message to the dapr topic that a user has worked on a content
+     *
+     * @param userProgressLogEvent event to publish
+     */
+    public void notifyUserWorkedOnContent(UserProgressLogEvent userProgressLogEvent) {
+        client.publishEvent(PUBSUB_NAME, USER_PROGRESS_LOG_TOPIC, userProgressLogEvent).block();
+    }
 
 }

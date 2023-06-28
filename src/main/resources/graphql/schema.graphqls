@@ -105,6 +105,6 @@ type Mutation {
   Publishes an event that other services can subscribe to.
   See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
   """
-  logMediaRecordLearned(userId: UUID!, mediaRecordId: UUID!): MediaRecord!
+  logMediaRecordWorkedOn(mediaRecordId: UUID!, userId: UUID!): MediaRecord!
 }
 

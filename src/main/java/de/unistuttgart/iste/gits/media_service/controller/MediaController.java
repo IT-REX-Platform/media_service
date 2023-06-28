@@ -2,10 +2,13 @@ package de.unistuttgart.iste.gits.media_service.controller;
 
 import de.unistuttgart.iste.gits.generated.dto.*;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
+import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -16,13 +19,11 @@ import java.util.UUID;
  */
 @Slf4j
 @Controller
+@RequiredArgsConstructor
 public class MediaController {
 
     private final MediaService mediaService;
-
-    public MediaController(MediaService mediaService) {
-        this.mediaService = mediaService;
-    }
+    private final MediaUserProgressDataService mediaUserProgressDataService;
 
     @QueryMapping
     public List<MediaRecord> mediaRecords() {
@@ -37,6 +38,11 @@ public class MediaController {
     @QueryMapping
     List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds) {
         return mediaService.getMediaRecordsByContentIds(contentIds);
+    }
+
+    @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
+    public MediaRecordProgressData userProgressData(MediaRecord mediaRecord, @Argument UUID userId) {
+        return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), userId);
     }
 
     @MutationMapping
@@ -62,5 +68,10 @@ public class MediaController {
     @MutationMapping
     public DownloadUrl createStorageDownloadUrl(@Argument CreateUrlInput input) {
         return mediaService.createDownloadUrl(input);
+    }
+
+    @MutationMapping
+    public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @Argument UUID userId) {
+        return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, userId);
     }
 }

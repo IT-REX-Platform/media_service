@@ -8,6 +8,7 @@ import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecor
 import io.minio.*;
 import io.minio.http.Method;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -22,12 +23,12 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class MediaService {
 
     public static final String BUCKET_ID = "bucketId";
-    public static final String NOT_FOUND = " not found.";
     public static final String FILENAME = "filename";
-    public static final String MEDIA_RECORD_WITH_ID = "Media record with id ";
+
     private final MinioClient minioClient;
 
     /**
@@ -44,18 +45,11 @@ public class MediaService {
      */
     private final TopicPublisher topicPublisher;
 
-    public MediaService(MediaRecordRepository mediaRecordRepository, ModelMapper modelMapper, MinioClient minioClient, TopicPublisher topicPublisher) {
-        this.repository = mediaRecordRepository;
-        this.modelMapper = modelMapper;
-        this.minioClient = minioClient;
-        this.topicPublisher = topicPublisher;
-    }
-
     /**
      * @return Returns a list containing all saved media records.
      */
     public List<MediaRecord> getAllMediaRecords() {
-        return repository.findAll().stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
+        return repository.findAll().stream().map(this::mapEntityToMediaRecord).toList();
     }
 
     /**
@@ -77,10 +71,15 @@ public class MediaService {
             List<UUID> missingIds = new ArrayList<>(ids);
             missingIds.removeAll(records.stream().map(MediaRecordEntity::getId).toList());
 
-            throw new EntityNotFoundException("Media record(s) with id(s) " + missingIds.stream().map(UUID::toString).collect(Collectors.joining(", ")) + NOT_FOUND);
+            throw new EntityNotFoundException("Media record(s) with id(s) " + missingIds.stream().map(UUID::toString).collect(Collectors.joining(", ")) + " not found.");
         }
 
-        return records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
+        return records.stream().map(this::mapEntityToMediaRecord).toList();
+    }
+
+    public MediaRecord getMediaRecordById(UUID id) {
+        requireMediaRecordExisting(id);
+        return mapEntityToMediaRecord(repository.getReferenceById(id));
     }
 
     /**
@@ -103,16 +102,26 @@ public class MediaService {
         }
 
         // loop over all the entities we got and put them in their respective lists
-        for(MediaRecordEntity entity : records) {
+        for (MediaRecordEntity entity : records) {
             for (int i = 0; i < contentIds.size(); i++) {
                 UUID contentId = contentIds.get(i);
                 if (entity.getContentIds().contains(contentId)) {
-                    result.get(i).add(modelMapper.map(entity, MediaRecord.class));
+                    result.get(i).add(mapEntityToMediaRecord(entity));
                 }
             }
         }
 
         return result;
+    }
+
+    public List<MediaRecordEntity> getMediaRecordEntitiesByContentId(UUID contentId) {
+        return repository.findMediaRecordEntitiesByContentIds(List.of(contentId));
+    }
+
+    public void requireMediaRecordExisting(UUID id) {
+        if (!repository.existsById(id)) {
+            throw new EntityNotFoundException("Media record with id " + id + " not found.");
+        }
     }
 
     /**
@@ -129,7 +138,7 @@ public class MediaService {
         //publish changes
         topicPublisher.notifyChange(entity, CrudOperation.CREATE);
 
-        return modelMapper.map(entity, MediaRecord.class);
+        return mapEntityToMediaRecord(entity);
     }
 
     /**
@@ -142,12 +151,13 @@ public class MediaService {
      */
     @SneakyThrows
     public UUID deleteMediaRecord(UUID id) {
-        Optional<MediaRecordEntity> entity = repository.findById(id);
+        requireMediaRecordExisting(id);
+        MediaRecordEntity entity = repository.getReferenceById(id);
         Map<String, String> minioVariables = createMinIOVariables(id);
         String bucketId = minioVariables.get(BUCKET_ID);
         String filename = minioVariables.get(FILENAME);
 
-        repository.delete(entity.orElseThrow(() -> new EntityNotFoundException(MEDIA_RECORD_WITH_ID + id + NOT_FOUND)));
+        repository.delete(entity);
 
         minioClient.removeObject(
                 RemoveObjectArgs
@@ -157,9 +167,7 @@ public class MediaService {
                         .build());
 
         //publish changes
-        if (entity.isPresent()){
-            topicPublisher.notifyChange(entity.get(), CrudOperation.DELETE);
-        }
+        topicPublisher.notifyChange(entity, CrudOperation.DELETE);
         return id;
     }
 
@@ -171,15 +179,17 @@ public class MediaService {
      * @return Returns the media record with its newly updated data.
      */
     public MediaRecord updateMediaRecord(UpdateMediaRecordInput input) {
-        if (!repository.existsById(input.getId())) {
-            throw new EntityNotFoundException(MEDIA_RECORD_WITH_ID + input.getId() + NOT_FOUND);
-        }
+        requireMediaRecordExisting(input.getId());
 
         MediaRecordEntity entity = repository.save(modelMapper.map(input, MediaRecordEntity.class));
 
         //publish changes
         topicPublisher.notifyChange(entity, CrudOperation.UPDATE);
 
+        return mapEntityToMediaRecord(entity);
+    }
+
+    public MediaRecord mapEntityToMediaRecord(MediaRecordEntity entity) {
         return modelMapper.map(entity, MediaRecord.class);
     }
 
@@ -245,18 +255,14 @@ public class MediaService {
     private Map<String, String> createMinIOVariables(UUID input) {
         Map<String, String> variables = new HashMap<>();
 
-        if (!repository.existsById(input)) {
-            throw new EntityNotFoundException(MEDIA_RECORD_WITH_ID + input + NOT_FOUND);
-        }
+        requireMediaRecordExisting(input);
 
-        Optional<MediaRecordEntity> entity = repository.findById(input);
+        MediaRecordEntity entity = repository.getReferenceById(input);
 
-        if (entity.isPresent()) {
-            String filename = entity.get().getId().toString();
-            variables.put(FILENAME, filename);
-            String bucketId = entity.get().getType().toString().toLowerCase();
-            variables.put(BUCKET_ID, bucketId);
-        }
+        String filename = entity.getId().toString();
+        variables.put(FILENAME, filename);
+        String bucketId = entity.getType().toString().toLowerCase();
+        variables.put(BUCKET_ID, bucketId);
 
         return variables;
     }
