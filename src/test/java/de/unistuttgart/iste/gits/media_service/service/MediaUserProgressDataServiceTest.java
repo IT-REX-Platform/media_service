@@ -11,7 +11,6 @@ import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecor
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -79,8 +78,7 @@ class MediaUserProgressDataServiceTest {
 
         doReturn(mediaRecord).when(mediaService).getMediaRecordById(mediaRecord.getId());
 
-        doReturn(Optional.of(MediaRecordProgressDataEntity.builder().workedOn(false).build()))
-                .when(mediaRecordProgressDataRepository).findById(any());
+        mockWorkedOnFor(mediaRecord, false);
 
         UUID userId = UUID.randomUUID();
         mediaUserProgressDataService
@@ -170,17 +168,27 @@ class MediaUserProgressDataServiceTest {
     }
 
     /**
-     * Mocks the repository to return the given workedOn values for the given media record
+     * Mocks the repository to return the given workedOn value for the given media record
      *
-     * @param record         the media record to mock the repository for
-     * @param workedOnValues the values to return for each call to the repository
+     * @param record   the media record to mock the repository for
+     * @param workedOn the values to return for the call to the repository
      */
-    private void mockWorkedOnFor(MediaRecord record, Boolean... workedOnValues) {
-        var mockReturnValues = Arrays.stream(workedOnValues)
-                .map(workedOn -> MediaRecordProgressDataEntity.builder().workedOn(workedOn).build())
-                .map(Optional::of)
-                .toArray(Optional[]::new);
-        doReturn(mockReturnValues)
+    @SuppressWarnings("SameParameterValue")
+    private void mockWorkedOnFor(MediaRecord record, Boolean workedOn) {
+        var mockReturnValue = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOn).build());
+        doReturn(mockReturnValue)
+                .when(mediaRecordProgressDataRepository)
+                .findById(argThat(arg -> arg.getMediaRecordId().equals(record.getId())));
+    }
+
+    /**
+     * Mock work on for the given media record for two calls to the repository
+     */
+    @SuppressWarnings("SameParameterValue")
+    private void mockWorkedOnFor(MediaRecord record, Boolean workedOnFirst, Boolean workedOnSecond) {
+        var mockReturnValue1 = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOnFirst).build());
+        var mockReturnValue2 = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOnSecond).build());
+        doReturn(mockReturnValue1, mockReturnValue2)
                 .when(mediaRecordProgressDataRepository)
                 .findById(argThat(arg -> arg.getMediaRecordId().equals(record.getId())));
     }
