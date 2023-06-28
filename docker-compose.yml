@@ -72,7 +72,7 @@ services:
       "--resources-path", "./components"
     ]
     volumes:
-      - "./components/:/components" # Mount our components folder for the runtime to use. The mounted location must match the --resources-path argument.
+      - "./../media_service/components/:/components" # Mount our components folder for the runtime to use. The mounted location must match the --resources-path argument.
     depends_on:
       - app-media
       - redis
