@@ -13,6 +13,10 @@ type MediaRecord {
   type: MediaType!
   # IDs of the MediaContents this media record is associated with
   contentIds: [UUID!]!
+  # Temporary upload url for the media record
+  uploadUrl: String!
+  # Temporary download url for the media record
+  downloadUrl: String!
 
   """
   The progress data of the given user for this medium.
@@ -53,21 +57,6 @@ input UpdateMediaRecordInput {
   contentIds: [UUID!]!
 }
 
-type DownloadUrl {
-  # pre-signed Url from which the file can be downloaded
-  url: String
-}
-
-type UploadUrl {
-  # pre-signed Url to which the file can be uploaded
-  url: String
-}
-
-input CreateUrlInput {
-  # id of the media record of the file for which a url should be generated
-  id: UUID!
-}
-
 # The type of the media record
 enum MediaType {
   VIDEO
@@ -95,11 +84,6 @@ type Mutation {
   updateMediaRecord(input: UpdateMediaRecordInput!): MediaRecord!
   # Deletes the media record with the given UUID
   deleteMediaRecord(id: UUID!): UUID!
-  # Creates a new upload URL for the given media record
-  createStorageUploadUrl(input: CreateUrlInput): UploadUrl
-  # Creates a new download URL for the given media record
-  createStorageDownloadUrl(input: CreateUrlInput): DownloadUrl
-
   """
   Logs that a media has been worked on by a user.
   Publishes an event that other services can subscribe to.

@@ -2,6 +2,7 @@ package de.unistuttgart.iste.gits.media_service.controller;
 
 import de.unistuttgart.iste.gits.generated.dto.*;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
+import graphql.schema.DataFetchingEnvironment;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,18 +27,29 @@ public class MediaController {
     private final MediaUserProgressDataService mediaUserProgressDataService;
 
     @QueryMapping
-    public List<MediaRecord> mediaRecords() {
-        return mediaService.getAllMediaRecords();
+    public List<MediaRecord> mediaRecords(DataFetchingEnvironment env) {
+        return mediaService.getAllMediaRecords(
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
     }
 
     @QueryMapping
-    public List<MediaRecord> mediaRecordsById(@Argument List<UUID> ids) {
-        return mediaService.getMediaRecordsById(ids);
+    public List<MediaRecord> mediaRecordsById(@Argument List<UUID> ids, DataFetchingEnvironment env) {
+        return mediaService.getMediaRecordsById(
+                ids,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
     }
 
     @QueryMapping
-    List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds) {
-        return mediaService.getMediaRecordsByContentIds(contentIds);
+    List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds, DataFetchingEnvironment env) {
+        return mediaService.getMediaRecordsByContentIds(
+                contentIds,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
     }
 
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
@@ -46,8 +58,12 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord createMediaRecord(@Argument CreateMediaRecordInput input) {
-        return mediaService.createMediaRecord(input);
+    public MediaRecord createMediaRecord(@Argument CreateMediaRecordInput input, DataFetchingEnvironment env) {
+        return mediaService.createMediaRecord(
+                input,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
     }
 
     @MutationMapping
@@ -56,18 +72,30 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord updateMediaRecord(@Argument UpdateMediaRecordInput input) {
-        return mediaService.updateMediaRecord(input);
+    public MediaRecord updateMediaRecord(@Argument UpdateMediaRecordInput input, DataFetchingEnvironment env) {
+        return mediaService.updateMediaRecord(
+                input,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
     }
 
-    @MutationMapping
-    public UploadUrl createStorageUploadUrl(@Argument CreateUrlInput input) {
-        return mediaService.createUploadUrl(input);
+    /**
+     * Checks if the downloadUrl field is in the selection set of a graphql query.
+     * @param env The DataFetchingEnvironment of the graphql query
+     * @return Returns true if the downloadUrl field is in the selection set of the passed DataFetchingEnvironment.
+     */
+    private boolean downloadUrlInSelectionSet(DataFetchingEnvironment env) {
+        return env.getSelectionSet().contains("downloadUrl");
     }
 
-    @MutationMapping
-    public DownloadUrl createStorageDownloadUrl(@Argument CreateUrlInput input) {
-        return mediaService.createDownloadUrl(input);
+    /**
+     * Checks if the uploadUrl field is in the selection set of a graphql query.
+     * @param env The DataFetchingEnvironment of the graphql query
+     * @return Returns true if the uploadUrl field is in the selection set of the passed DataFetchingEnvironment.
+     */
+    private boolean uploadUrlInSelectionSet(DataFetchingEnvironment env) {
+        return env.getSelectionSet().contains("uploadUrl");
     }
 
     @MutationMapping
