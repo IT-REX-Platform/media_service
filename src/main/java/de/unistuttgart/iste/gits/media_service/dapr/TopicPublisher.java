@@ -43,8 +43,7 @@ public class TopicPublisher {
      * @param mediaRecordEntity changed entity
      * @param operation         type of CRUD operation performed on entity
      */
-    public void notifyChange(MediaRecordEntity mediaRecordEntity, CrudOperation operation) {
-
+    public void notifyResourceChange(MediaRecordEntity mediaRecordEntity, CrudOperation operation) {
         ResourceUpdateDTO dto = ResourceUpdateDTO.builder()
                 .entityId(mediaRecordEntity.getId())
                 .contentIds(mediaRecordEntity.getContentIds())

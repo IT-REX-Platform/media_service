@@ -9,6 +9,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+/**
+ * This is a dev-config for the TopicPublisher. It is intended to be used for development only.
+ * It will log all messages instead of sending them to the dapr topic.
+ * <p>
+ * The purpose of this is to allow developers to work on the media-service without having to run the dapr runtime.
+ * <p>
+ * To use this config, set the spring profile to "dev" (or any other profile that is not "prod").
+ */
 @Configuration
 @Profile("!prod")
 @Slf4j
@@ -27,7 +35,7 @@ public class DevTopicPublisherConfiguration {
         }
 
         @Override
-        public void notifyChange(MediaRecordEntity mediaRecordEntity, CrudOperation operation) {
+        public void notifyResourceChange(MediaRecordEntity mediaRecordEntity, CrudOperation operation) {
             log.info("notifyChange called with {} and {}", mediaRecordEntity, operation);
         }
 

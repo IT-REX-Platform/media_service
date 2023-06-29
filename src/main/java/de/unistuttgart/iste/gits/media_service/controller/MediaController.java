@@ -1,9 +1,12 @@
 package de.unistuttgart.iste.gits.media_service.controller;
 
-import de.unistuttgart.iste.gits.generated.dto.*;
+import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
+import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
+import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
+import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
-import graphql.schema.DataFetchingEnvironment;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
+import graphql.schema.DataFetchingEnvironment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -80,8 +83,14 @@ public class MediaController {
         );
     }
 
+    @MutationMapping
+    public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @Argument UUID userId) {
+        return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, userId);
+    }
+
     /**
      * Checks if the downloadUrl field is in the selection set of a graphql query.
+     *
      * @param env The DataFetchingEnvironment of the graphql query
      * @return Returns true if the downloadUrl field is in the selection set of the passed DataFetchingEnvironment.
      */
@@ -96,10 +105,5 @@ public class MediaController {
      */
     private boolean uploadUrlInSelectionSet(DataFetchingEnvironment env) {
         return env.getSelectionSet().contains("uploadUrl");
-    }
-
-    @MutationMapping
-    public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @Argument UUID userId) {
-        return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, userId);
     }
 }

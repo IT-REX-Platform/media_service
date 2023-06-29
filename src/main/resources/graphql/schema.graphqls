@@ -86,8 +86,11 @@ type Mutation {
   deleteMediaRecord(id: UUID!): UUID!
   """
   Logs that a media has been worked on by a user.
-  Publishes an event that other services can subscribe to.
   See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
+
+  Possible side effects:
+  When all media records of a content have been worked on by a user,
+  a user-progress event is emitted for the content.
   """
   logMediaRecordWorkedOn(mediaRecordId: UUID!, userId: UUID!): MediaRecord!
 }

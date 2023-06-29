@@ -7,6 +7,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 
+/**
+ * This is a prod-config for the TopicPublisher. It uses the dapr client to send messages to the dapr topic.
+ */
 @Configuration
 @Profile("prod")
 public class TopicPublisherConfiguration {

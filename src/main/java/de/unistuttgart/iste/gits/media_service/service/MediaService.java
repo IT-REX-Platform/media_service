@@ -1,11 +1,12 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
 import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
-import de.unistuttgart.iste.gits.generated.dto.*;
+import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
+import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
+import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
-import graphql.schema.DataFetchingEnvironment;
 import io.minio.*;
 import io.minio.http.Method;
 import jakarta.persistence.EntityNotFoundException;
@@ -49,7 +50,7 @@ public class MediaService {
     /**
      * Returns all media records.
      *
-     * @param generateUploadUrls If temporary upload urls should be generated for the media records
+     * @param generateUploadUrls   If temporary upload urls should be generated for the media records
      * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return Returns a list containing all saved media records.
      */
@@ -65,8 +66,8 @@ public class MediaService {
      * When passed a list of media record ids, returns a list containing the records matching these ids, or throws
      * an EntityNotFoundException when there is no matching record for one or more of the passed ids.
      *
-     * @param ids The ids to retrieve the records for.
-     * @param generateUploadUrls If temporary upload urls should be generated for the media records
+     * @param ids                  The ids to retrieve the records for.
+     * @param generateUploadUrls   If temporary upload urls should be generated for the media records
      * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return List of the records with matching ids.
      * @throws EntityNotFoundException Thrown when one or more passed ids do not have corresponding media records in
@@ -101,8 +102,8 @@ public class MediaService {
     /**
      * Gets all media records that are associated with the passed content ids.
      *
-     * @param contentIds The content ids to get the media records for.
-     * @param generateUploadUrls If temporary upload urls should be generated for the media records
+     * @param contentIds           The content ids to get the media records for.
+     * @param generateUploadUrls   If temporary upload urls should be generated for the media records
      * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return Returns a list of lists, where each sublist stores the media records that are associated with the content
      * id at the same index in the passed list.
@@ -140,15 +141,15 @@ public class MediaService {
 
     public void requireMediaRecordExisting(UUID id) {
         if (!repository.existsById(id)) {
-            throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND.formatted(input.toString()));
+            throw new EntityNotFoundException("Media record with id " + id + " not found.");
         }
     }
 
     /**
      * Creates a new media record with the attributes specified in the input argument.
      *
-     * @param input Object storing the attributes the newly created media record should have.
-     * @param generateUploadUrl If a temporary upload url should be generated for the media record
+     * @param input               Object storing the attributes the newly created media record should have.
+     * @param generateUploadUrl   If a temporary upload url should be generated for the media record
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record which was created, with the ID generated for it.
      */
@@ -158,7 +159,7 @@ public class MediaService {
         repository.save(entity);
 
         //publish changes
-        topicPublisher.notifyChange(entity, CrudOperation.CREATE);
+        topicPublisher.notifyResourceChange(entity, CrudOperation.CREATE);
 
         return fillMediaRecordUrlsIfRequested(
                 mapEntityToMediaRecord(entity),
@@ -193,41 +194,42 @@ public class MediaService {
                         .build());
 
         //publish changes
-        topicPublisher.notifyChange(entity, CrudOperation.DELETE);
+        topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
         return id;
     }
 
     /**
      * Updates an existing media record matching the id passed as an attribute in the input argument.
      *
-     * @param input Object containing the new attributes that should be stored for the existing media record matching
-     *              the id field of the input object.
-     * @param generateUploadUrl If a temporary upload url should be generated for the media record
+     * @param input               Object containing the new attributes that should be stored for the existing media record matching
+     *                            the id field of the input object.
+     * @param generateUploadUrl   If a temporary upload url should be generated for the media record
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record with its newly updated data.
      */
-    public MediaRecord updateMediaRecord(UpdateMediaRecordInput input) {
+    public MediaRecord updateMediaRecord(UpdateMediaRecordInput input, boolean generateUploadUrl, boolean generateDownloadUrl) {
         requireMediaRecordExisting(input.getId());
 
         MediaRecordEntity entity = repository.save(modelMapper.map(input, MediaRecordEntity.class));
 
         //publish changes
-        topicPublisher.notifyChange(entity, CrudOperation.UPDATE);
+        topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
 
-        return mapEntityToMediaRecord(entity);
-    }
-
-    public MediaRecord mapEntityToMediaRecord(MediaRecordEntity entity) {
         return fillMediaRecordUrlsIfRequested(
-                modelMapper.map(entity, MediaRecord.class),
+                mapEntityToMediaRecord(entity),
                 generateUploadUrl,
                 generateDownloadUrl
         );
     }
 
+    public MediaRecord mapEntityToMediaRecord(MediaRecordEntity entity) {
+        return modelMapper.map(entity, MediaRecord.class);
+    }
+
     /**
      * Helper method which can be used to fill passed media records with generated upload/download urls if such urls
      * have been requested in the selection set of the graphql query.
+     *
      * @param mediaRecords The list of media records to fill the urls for.
      * @return Returns the same list (which has been modified in-place) with the media records with the now added urls.
      */
@@ -242,17 +244,18 @@ public class MediaService {
     /**
      * Helper method which adds a generated upload and/or download url to the passed media record and returns that same
      * media record.
-     * @param mediaRecord The media record to add the urls to.
-     * @param generateUploadUrl If an upload url should be generated.
+     *
+     * @param mediaRecord         The media record to add the urls to.
+     * @param generateUploadUrl   If an upload url should be generated.
      * @param generateDownloadUrl If a download url should be generated
      * @return Returns the same media record that has been passed to the method.
      */
     private MediaRecord fillMediaRecordUrlsIfRequested(MediaRecord mediaRecord, boolean generateUploadUrl, boolean generateDownloadUrl) {
-        if(generateUploadUrl) {
+        if (generateUploadUrl) {
             mediaRecord.setUploadUrl(createUploadUrl(mediaRecord.getId()));
         }
 
-        if(generateDownloadUrl) {
+        if (generateDownloadUrl) {
             mediaRecord.setDownloadUrl(createDownloadUrl(mediaRecord.getId()));
         }
 
