@@ -5,6 +5,7 @@ import de.unistuttgart.iste.gits.generated.dto.*;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
+import graphql.schema.DataFetchingEnvironment;
 import io.minio.*;
 import io.minio.http.Method;
 import jakarta.persistence.EntityNotFoundException;
@@ -25,9 +26,8 @@ import java.util.stream.Collectors;
 public class MediaService {
 
     public static final String BUCKET_ID = "bucketId";
-    public static final String NOT_FOUND = " not found.";
     public static final String FILENAME = "filename";
-    public static final String MEDIA_RECORD_WITH_ID = "Media record with id ";
+    public static final String MEDIA_RECORDS_NOT_FOUND = "Media record(s) with id(s) %s not found.";
     private final MinioClient minioClient;
 
     /**
@@ -52,10 +52,18 @@ public class MediaService {
     }
 
     /**
+     * Returns all media records.
+     *
+     * @param generateUploadUrls If temporary upload urls should be generated for the media records
+     * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return Returns a list containing all saved media records.
      */
-    public List<MediaRecord> getAllMediaRecords() {
-        return repository.findAll().stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
+    public List<MediaRecord> getAllMediaRecords(boolean generateUploadUrls, boolean generateDownloadUrls) {
+        List<MediaRecord> records = repository.findAll().stream()
+                .map(x -> modelMapper.map(x, MediaRecord.class))
+                .toList();
+
+        return fillMediaRecordsUrlsIfRequested(records, generateUploadUrls, generateDownloadUrls);
     }
 
     /**
@@ -63,11 +71,13 @@ public class MediaService {
      * an EntityNotFoundException when there is no matching record for one or more of the passed ids.
      *
      * @param ids The ids to retrieve the records for.
+     * @param generateUploadUrls If temporary upload urls should be generated for the media records
+     * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return List of the records with matching ids.
      * @throws EntityNotFoundException Thrown when one or more passed ids do not have corresponding media records in
      *                                 the database.
      */
-    public List<MediaRecord> getMediaRecordsById(List<UUID> ids) {
+    public List<MediaRecord> getMediaRecordsById(List<UUID> ids, boolean generateUploadUrls, boolean generateDownloadUrls) {
         List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
 
         // if there are fewer returned records than passed ids, that means that some ids could not be found in the
@@ -77,20 +87,27 @@ public class MediaService {
             List<UUID> missingIds = new ArrayList<>(ids);
             missingIds.removeAll(records.stream().map(MediaRecordEntity::getId).toList());
 
-            throw new EntityNotFoundException("Media record(s) with id(s) " + missingIds.stream().map(UUID::toString).collect(Collectors.joining(", ")) + NOT_FOUND);
+            throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND
+                    .formatted(missingIds.stream().map(UUID::toString).collect(Collectors.joining(", "))));
         }
 
-        return records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
+        return fillMediaRecordsUrlsIfRequested(
+                records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
+                generateUploadUrls,
+                generateDownloadUrls
+        );
     }
 
     /**
      * Gets all media records that are associated with the passed content ids.
      *
      * @param contentIds The content ids to get the media records for.
+     * @param generateUploadUrls If temporary upload urls should be generated for the media records
+     * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return Returns a list of lists, where each sublist stores the media records that are associated with the content
      * id at the same index in the passed list.
      */
-    public List<List<MediaRecord>> getMediaRecordsByContentIds(List<UUID> contentIds) {
+    public List<List<MediaRecord>> getMediaRecordsByContentIds(List<UUID> contentIds, boolean generateUploadUrls, boolean generateDownloadUrls) {
         List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByContentIds(contentIds);
 
         // create our resulting list
@@ -112,6 +129,8 @@ public class MediaService {
             }
         }
 
+        result.forEach(x -> fillMediaRecordsUrlsIfRequested(x, generateUploadUrls, generateDownloadUrls));
+
         return result;
     }
 
@@ -119,9 +138,11 @@ public class MediaService {
      * Creates a new media record with the attributes specified in the input argument.
      *
      * @param input Object storing the attributes the newly created media record should have.
+     * @param generateUploadUrl If a temporary upload url should be generated for the media record
+     * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record which was created, with the ID generated for it.
      */
-    public MediaRecord createMediaRecord(CreateMediaRecordInput input) {
+    public MediaRecord createMediaRecord(CreateMediaRecordInput input, boolean generateUploadUrl, boolean generateDownloadUrl) {
         MediaRecordEntity entity = modelMapper.map(input, MediaRecordEntity.class);
 
         repository.save(entity);
@@ -129,7 +150,11 @@ public class MediaService {
         //publish changes
         topicPublisher.notifyChange(entity, CrudOperation.CREATE);
 
-        return modelMapper.map(entity, MediaRecord.class);
+        return fillMediaRecordUrlsIfRequested(
+                modelMapper.map(entity, MediaRecord.class),
+                generateUploadUrl,
+                generateDownloadUrl
+        );
     }
 
     /**
@@ -147,7 +172,8 @@ public class MediaService {
         String bucketId = minioVariables.get(BUCKET_ID);
         String filename = minioVariables.get(FILENAME);
 
-        repository.delete(entity.orElseThrow(() -> new EntityNotFoundException(MEDIA_RECORD_WITH_ID + id + NOT_FOUND)));
+        repository.delete(entity.orElseThrow(() ->
+                new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND.formatted(id.toString()))));
 
         minioClient.removeObject(
                 RemoveObjectArgs
@@ -168,11 +194,13 @@ public class MediaService {
      *
      * @param input Object containing the new attributes that should be stored for the existing media record matching
      *              the id field of the input object.
+     * @param generateUploadUrl If a temporary upload url should be generated for the media record
+     * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record with its newly updated data.
      */
-    public MediaRecord updateMediaRecord(UpdateMediaRecordInput input) {
+    public MediaRecord updateMediaRecord(UpdateMediaRecordInput input, boolean generateUploadUrl, boolean generateDownloadUrl) {
         if (!repository.existsById(input.getId())) {
-            throw new EntityNotFoundException(MEDIA_RECORD_WITH_ID + input.getId() + NOT_FOUND);
+            throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND.formatted(input.getId().toString()));
         }
 
         MediaRecordEntity entity = repository.save(modelMapper.map(input, MediaRecordEntity.class));
@@ -180,18 +208,56 @@ public class MediaService {
         //publish changes
         topicPublisher.notifyChange(entity, CrudOperation.UPDATE);
 
-        return modelMapper.map(entity, MediaRecord.class);
+        return fillMediaRecordUrlsIfRequested(
+                modelMapper.map(entity, MediaRecord.class),
+                generateUploadUrl,
+                generateDownloadUrl
+        );
+    }
+
+    /**
+     * Helper method which can be used to fill passed media records with generated upload/download urls if such urls
+     * have been requested in the selection set of the graphql query.
+     * @param mediaRecords The list of media records to fill the urls for.
+     * @return Returns the same list (which has been modified in-place) with the media records with the now added urls.
+     */
+    private List<MediaRecord> fillMediaRecordsUrlsIfRequested(List<MediaRecord> mediaRecords, boolean generateUploadUrls, boolean generateDownloadUrls) {
+        for (MediaRecord record : mediaRecords) {
+            fillMediaRecordUrlsIfRequested(record, generateUploadUrls, generateDownloadUrls);
+        }
+
+        return mediaRecords;
+    }
+
+    /**
+     * Helper method which adds a generated upload and/or download url to the passed media record and returns that same
+     * media record.
+     * @param mediaRecord The media record to add the urls to.
+     * @param generateUploadUrl If an upload url should be generated.
+     * @param generateDownloadUrl If a download url should be generated
+     * @return Returns the same media record that has been passed to the method.
+     */
+    private MediaRecord fillMediaRecordUrlsIfRequested(MediaRecord mediaRecord, boolean generateUploadUrl, boolean generateDownloadUrl) {
+        if(generateUploadUrl) {
+            mediaRecord.setUploadUrl(createUploadUrl(mediaRecord.getId()));
+        }
+
+        if(generateDownloadUrl) {
+            mediaRecord.setDownloadUrl(createDownloadUrl(mediaRecord.getId()));
+        }
+
+        return mediaRecord;
     }
 
     /**
      * Creates a URL for uploading a file to the minIO Server.
      *
-     * @param input DTO which contains the bucket id to which to upload as well as the name of the file which should be uploaded.
+     * @param mediaRecordId UUID of the media record to generate the upload url for.
      * @return Returns the created uploadURL.
      */
     @SneakyThrows
-    public UploadUrl createUploadUrl(CreateUrlInput input) {
-        Map<String, String> variables = createMinIOVariables(input.getId());
+    private String createUploadUrl(UUID mediaRecordId) {
+        Map<String, String> variables = createMinIOVariables(mediaRecordId);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
@@ -210,18 +276,18 @@ public class MediaService {
                         .expiry(15, TimeUnit.MINUTES)
                         .build());
 
-        return new UploadUrl(url);
+        return url;
     }
 
     /**
      * Creates a URL for downloading a file from the MinIO Server.
      *
-     * @param input DTO which contains the bucket id from which to download as well as the name of the file which should be downloaded.
+     * @param mediaRecordId UUID of the media record to generate the download url for.
      * @return Returns the created downloadURL.
      */
     @SneakyThrows
-    public DownloadUrl createDownloadUrl(CreateUrlInput input) {
-        Map<String, String> variables = createMinIOVariables(input.getId());
+    private String createDownloadUrl(UUID mediaRecordId) {
+        Map<String, String> variables = createMinIOVariables(mediaRecordId);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
@@ -233,7 +299,7 @@ public class MediaService {
                         .object(filename)
                         .expiry(15, TimeUnit.MINUTES)
                         .build());
-        return new DownloadUrl(url);
+        return url;
     }
 
     /**
@@ -246,7 +312,7 @@ public class MediaService {
         Map<String, String> variables = new HashMap<>();
 
         if (!repository.existsById(input)) {
-            throw new EntityNotFoundException(MEDIA_RECORD_WITH_ID + input + NOT_FOUND);
+            throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND.formatted(input.toString()));
         }
 
         Optional<MediaRecordEntity> entity = repository.findById(input);
