@@ -222,8 +222,8 @@ public class MediaService {
      * @return Returns the same list (which has been modified in-place) with the media records with the now added urls.
      */
     private List<MediaRecord> fillMediaRecordsUrlsIfRequested(List<MediaRecord> mediaRecords, boolean generateUploadUrls, boolean generateDownloadUrls) {
-        for (MediaRecord record : mediaRecords) {
-            fillMediaRecordUrlsIfRequested(record, generateUploadUrls, generateDownloadUrls);
+        for (MediaRecord mediaRecord : mediaRecords) {
+            fillMediaRecordUrlsIfRequested(mediaRecord, generateUploadUrls, generateDownloadUrls);
         }
 
         return mediaRecords;
@@ -267,7 +267,7 @@ public class MediaService {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketId).build());
         }
 
-        String url = minioClient.getPresignedObjectUrl(
+        return minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs
                         .builder()
                         .method(Method.PUT)
@@ -275,8 +275,6 @@ public class MediaService {
                         .object(filename)
                         .expiry(15, TimeUnit.MINUTES)
                         .build());
-
-        return url;
     }
 
     /**
@@ -292,14 +290,13 @@ public class MediaService {
         String filename = variables.get(FILENAME);
 
 
-        String url = minioClient.getPresignedObjectUrl(
+        return minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
                         .bucket(bucketId)
                         .object(filename)
                         .expiry(15, TimeUnit.MINUTES)
                         .build());
-        return url;
     }
 
     /**
