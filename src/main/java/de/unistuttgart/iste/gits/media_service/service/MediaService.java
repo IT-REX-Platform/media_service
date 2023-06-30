@@ -1,6 +1,6 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
-import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
+import de.unistuttgart.iste.gits.common.event.CrudOperation;
 import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;

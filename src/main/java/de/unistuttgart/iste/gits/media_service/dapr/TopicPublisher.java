@@ -1,7 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.dapr;
 
-import de.unistuttgart.iste.gits.common.dapr.CrudOperation;
-import de.unistuttgart.iste.gits.common.dapr.ResourceUpdateDTO;
+import de.unistuttgart.iste.gits.common.event.CrudOperation;
+import de.unistuttgart.iste.gits.common.event.ResourceUpdateEvent;
 import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import io.dapr.client.DaprClient;
@@ -29,7 +29,7 @@ public class TopicPublisher {
      *
      * @param dto message
      */
-    private void publishChanges(ResourceUpdateDTO dto) {
+    private void publishChanges(ResourceUpdateEvent dto) {
         log.debug("publishing message");
         client.publishEvent(
                 PUBSUB_NAME,
@@ -44,7 +44,7 @@ public class TopicPublisher {
      * @param operation         type of CRUD operation performed on entity
      */
     public void notifyResourceChange(MediaRecordEntity mediaRecordEntity, CrudOperation operation) {
-        ResourceUpdateDTO dto = ResourceUpdateDTO.builder()
+        ResourceUpdateEvent dto = ResourceUpdateEvent.builder()
                 .entityId(mediaRecordEntity.getId())
                 .contentIds(mediaRecordEntity.getContentIds())
                 .operation(operation).build();
