@@ -21,7 +21,7 @@ type MediaRecord {
   """
   The progress data of the given user for this medium.
   """
-  userProgressData(userId: UUID!): MediaRecordProgressData!
+  userProgressData: MediaRecordProgressData!
 }
 
 type MediaRecordProgressData {
@@ -85,13 +85,13 @@ type Mutation {
   # Deletes the media record with the given UUID
   deleteMediaRecord(id: UUID!): UUID!
   """
-  Logs that a media has been worked on by a user.
+  Logs that a media has been worked on by the current user.
   See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
 
   Possible side effects:
   When all media records of a content have been worked on by a user,
   a user-progress event is emitted for the content.
   """
-  logMediaRecordWorkedOn(mediaRecordId: UUID!, userId: UUID!): MediaRecord!
+  logMediaRecordWorkedOn(mediaRecordId: UUID!): MediaRecord!
 }
 

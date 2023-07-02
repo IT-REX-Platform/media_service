@@ -1,18 +1,17 @@
 package de.unistuttgart.iste.gits.media_service.controller;
 
+import de.unistuttgart.iste.gits.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
 import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
+import graphql.GraphQLContext;
 import graphql.schema.DataFetchingEnvironment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
-import org.springframework.graphql.data.method.annotation.QueryMapping;
-import org.springframework.graphql.data.method.annotation.SchemaMapping;
+import org.springframework.graphql.data.method.annotation.*;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -56,8 +55,8 @@ public class MediaController {
     }
 
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
-    public MediaRecordProgressData userProgressData(MediaRecord mediaRecord, @Argument UUID userId) {
-        return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), userId);
+    public MediaRecordProgressData userProgressData(MediaRecord mediaRecord, @ContextValue LoggedInUser currentUser) {
+        return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), currentUser.getId());
     }
 
     @MutationMapping
@@ -84,8 +83,8 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @Argument UUID userId) {
-        return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, userId);
+    public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @ContextValue LoggedInUser currentUser) {
+        return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, currentUser.getId());
     }
 
     /**
