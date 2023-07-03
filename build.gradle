@@ -71,7 +71,7 @@ dependencies {
 	implementation 'io.dapr:dapr-sdk-springboot:1.9.0-rc-1'
 	implementation('de.unistuttgart.iste.gits:gits-common') {
 		version {
-			branch = 'auth_headers'
+			branch = 'main'
 		}
 	}
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
