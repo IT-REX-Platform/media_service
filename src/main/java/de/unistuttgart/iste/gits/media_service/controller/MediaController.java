@@ -7,7 +7,6 @@ import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
 import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
-import graphql.GraphQLContext;
 import graphql.schema.DataFetchingEnvironment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
