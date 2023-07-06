@@ -20,7 +20,6 @@ public class MinIoConfiguration {
   private String minioUrl;
 
   @Bean
-  @Primary
   public MinioClient minioClient() {
     return new MinioClient.Builder()
         .credentials(accessKey, secretKey)
