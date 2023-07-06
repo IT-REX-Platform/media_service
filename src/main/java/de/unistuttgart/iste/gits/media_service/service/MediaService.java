@@ -8,6 +8,7 @@ import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -186,12 +187,17 @@ public class MediaService {
 
         repository.delete(entity);
 
-        minioClient.removeObject(
-                RemoveObjectArgs
-                        .builder()
-                        .bucket(bucketId)
-                        .object(filename)
-                        .build());
+        boolean bucketExists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
+        if (bucketExists) {
+            if (isObjectExist(filename, bucketId)) {
+                minioClient.removeObject(
+                        RemoveObjectArgs
+                                .builder()
+                                .bucket(bucketId)
+                                .object(filename)
+                                .build());
+            }
+        }
 
         //publish changes
         topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
@@ -331,5 +337,20 @@ public class MediaService {
         variables.put(BUCKET_ID, bucketId);
 
         return variables;
+    }
+
+    public boolean isObjectExist(String name, String bucketname) {
+        try {
+            minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(bucketname)
+                    .object(name).build());
+            return true;
+        } catch (ErrorResponseException e) {
+            e.printStackTrace();
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
     }
 }
