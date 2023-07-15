@@ -34,6 +34,7 @@ public class MinIoConfiguration {
         return new MinioClient.Builder()
                 .credentials(accessKey, secretKey)
                 .endpoint(minioExternalUrl, 9000, false)
+                .region("eu-central-1")
                 .build();
     }
 
