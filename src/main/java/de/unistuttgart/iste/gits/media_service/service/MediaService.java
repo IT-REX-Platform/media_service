@@ -32,7 +32,8 @@ public class MediaService {
     public static final String BUCKET_ID = "bucketId";
     public static final String FILENAME = "filename";
     public static final String MEDIA_RECORDS_NOT_FOUND = "Media record(s) with id(s) %s not found.";
-    private final MinioClient minioClient;
+    private final MinioClient minioInternalClient;
+    private final MinioClient minioExternalClient;
 
     /**
      * Database repository storing our media records.
@@ -187,10 +188,10 @@ public class MediaService {
 
         repository.delete(entity);
 
-        boolean bucketExists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
+        boolean bucketExists = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
         if (bucketExists) {
             if (isObjectExist(filename, bucketId)) {
-                minioClient.removeObject(
+                minioInternalClient.removeObject(
                         RemoveObjectArgs
                                 .builder()
                                 .bucket(bucketId)
@@ -281,12 +282,12 @@ public class MediaService {
         String filename = variables.get(FILENAME);
 
         // Ensures that the Bucket exists or creates a new one otherwise. Weirdly this only works if at least one bucket already exists.
-        boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
+        boolean found = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
         if (!found) {
-            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketId).build());
+            minioInternalClient.makeBucket(MakeBucketArgs.builder().bucket(bucketId).build());
         }
 
-        return minioClient.getPresignedObjectUrl(
+        return minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs
                         .builder()
                         .method(Method.PUT)
@@ -309,7 +310,7 @@ public class MediaService {
         String filename = variables.get(FILENAME);
 
 
-        return minioClient.getPresignedObjectUrl(
+        return minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
                         .bucket(bucketId)
@@ -341,7 +342,7 @@ public class MediaService {
 
     public boolean isObjectExist(String name, String bucketname) {
         try {
-            minioClient.statObject(StatObjectArgs.builder()
+            minioInternalClient.statObject(StatObjectArgs.builder()
                     .bucket(bucketname)
                     .object(name).build());
             return true;
