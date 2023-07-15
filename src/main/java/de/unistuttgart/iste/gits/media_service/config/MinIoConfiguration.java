@@ -33,7 +33,7 @@ public class MinIoConfiguration {
     public MinioClient minioExternalClient() {
         return new MinioClient.Builder()
                 .credentials(accessKey, secretKey)
-                .endpoint(minioExternalUrl)
+                .endpoint(minioExternalUrl, 9000, false)
                 .build();
     }
 
