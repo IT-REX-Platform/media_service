@@ -1,5 +1,6 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
+import de.unistuttgart.iste.gits.common.event.ContentChangeEvent;
 import de.unistuttgart.iste.gits.common.event.CrudOperation;
 import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
@@ -188,6 +189,7 @@ public class MediaService {
 
         repository.delete(entity);
 
+
         boolean bucketExists = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
         if (bucketExists) {
             if (isObjectExist(filename, bucketId)) {
@@ -342,7 +344,9 @@ public class MediaService {
 
     public boolean isObjectExist(String name, String bucketname) {
         try {
+
             minioInternalClient.statObject(StatObjectArgs.builder()
+
                     .bucket(bucketname)
                     .object(name).build());
             return true;
@@ -353,5 +357,42 @@ public class MediaService {
             e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    /**
+     * function that updates all media records that contain at least one of the received content IDs.
+     * All received content Ids are removed from the media records.
+     * If changes are performed to an entity, a message is published to a dapr topic.
+     * @param dto Event object containing a list of content IDs and a CRUD operation
+     */
+    public void removeContentIds(ContentChangeEvent dto){
+
+        // check if DTO is complete
+        if (dto.getContentIds() == null  || dto.getOperation() == null){
+            throw new NullPointerException("incomplete message received: all fields of a message must be non-null");
+        }
+
+        //This method should only process Content Deletion Events
+        if (!dto.getOperation().equals(CrudOperation.DELETE) || dto.getContentIds().isEmpty()){
+            return;
+        }
+
+
+        List<MediaRecordEntity> entities = repository.findMediaRecordEntitiesByContentIds(dto.getContentIds());
+
+        // apply changes to all found media records
+        for (MediaRecordEntity entity: entities) {
+
+            //is true if changes are applied
+            boolean listChanged = entity.getContentIds().removeAll(dto.getContentIds());
+
+            if (listChanged){
+                repository.save(entity);
+                //publish changes to dapr topic
+                topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
+            }
+
+        }
+
     }
 }
