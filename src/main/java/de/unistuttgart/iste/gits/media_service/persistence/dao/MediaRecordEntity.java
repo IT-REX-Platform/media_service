@@ -25,6 +25,9 @@ public class MediaRecordEntity {
     @Length(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
     private String name;
 
+    @NotNull(message = "Creator ID must not be null")
+    private UUID creatorId;
+
     @Enumerated(EnumType.ORDINAL)
     private MediaType type;
 

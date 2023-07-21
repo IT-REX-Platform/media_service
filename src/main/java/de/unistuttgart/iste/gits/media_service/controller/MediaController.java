@@ -45,6 +45,15 @@ public class MediaController {
     }
 
     @QueryMapping
+    public List<MediaRecord> userMediaRecords(@ContextValue LoggedInUser currentUser, DataFetchingEnvironment env) {
+        return mediaService.getMediaRecordsForUser(
+                currentUser.getId(),
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
+    }
+
+    @QueryMapping
     List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds, DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsByContentIds(
                 contentIds,
@@ -59,9 +68,12 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord createMediaRecord(@Argument CreateMediaRecordInput input, DataFetchingEnvironment env) {
+    public MediaRecord createMediaRecord(@Argument CreateMediaRecordInput input,
+                                         @ContextValue LoggedInUser currentUser,
+                                         DataFetchingEnvironment env) {
         return mediaService.createMediaRecord(
                 input,
+                currentUser.getId(),
                 uploadUrlInSelectionSet(env),
                 downloadUrlInSelectionSet(env)
         );
@@ -84,6 +96,11 @@ public class MediaController {
     @MutationMapping
     public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @ContextValue LoggedInUser currentUser) {
         return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, currentUser.getId());
+    }
+
+    @MutationMapping
+    public List<MediaRecord> linkMediaRecordsWithContent(@Argument UUID contentId, @Argument List<UUID> mediaRecordIds) {
+        return mediaService.linkMediaRecordsWithContent(contentId, mediaRecordIds);
     }
 
     /**

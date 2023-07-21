@@ -14,4 +14,6 @@ public interface MediaRecordRepository extends JpaRepository<MediaRecordEntity, 
     // Query annotation is necessary to be able to match a list against another
     @Query("SELECT DISTINCT media FROM MediaRecord media JOIN media.contentIds actualIds WHERE actualIds IN :contentIds")
     List<MediaRecordEntity> findMediaRecordEntitiesByContentIds(List<UUID> contentIds);
+
+    List<MediaRecordEntity> findMediaRecordEntitiesByCreatorId(UUID creatorId);
 }

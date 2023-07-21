@@ -103,6 +103,21 @@ public class MediaService {
     }
 
     /**
+     * Gets all media records for which the specified user is the creator.
+     * @param userId The id of the user to get the media records for.
+     * @return Returns a list of the user's media records.
+     */
+    public List<MediaRecord> getMediaRecordsForUser(UUID userId, boolean generateUploadUrls, boolean generateDownloadUrls) {
+        List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByCreatorId(userId);
+
+        return fillMediaRecordsUrlsIfRequested(
+                records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
+                generateUploadUrls,
+                generateDownloadUrls
+        );
+    }
+
+    /**
      * Gets all media records that are associated with the passed content ids.
      *
      * @param contentIds           The content ids to get the media records for.
@@ -149,15 +164,49 @@ public class MediaService {
     }
 
     /**
+     * Links the media records with the passed ids to the content with the passed id.
+     * @param contentId The content id to link the media records to.
+     * @param mediaRecordIds The ids of the media records to link to the content.
+     * @return Returns a list of the media records that were linked to the content.
+     */
+    public List<MediaRecord> linkMediaRecordsWithContent(UUID contentId, List<UUID> mediaRecordIds) {
+        List<MediaRecordEntity> entities = repository.findAllById(mediaRecordIds);
+
+        // if there are fewer returned records than passed ids, that means that some ids could not be found in the
+        // db. In that case, calculate the difference of the two lists and throw an exception listing which ids
+        // could not be found
+        if (entities.size() != mediaRecordIds.size()) {
+            List<UUID> missingIds = new ArrayList<>(mediaRecordIds);
+            missingIds.removeAll(entities.stream().map(MediaRecordEntity::getId).toList());
+
+            throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND
+                    .formatted(missingIds.stream().map(UUID::toString).collect(Collectors.joining(", "))));
+        }
+
+        for(MediaRecordEntity entity : entities) {
+            entity.getContentIds().add(contentId);
+            repository.save(entity);
+        }
+
+        return entities.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
+    }
+
+    /**
      * Creates a new media record with the attributes specified in the input argument.
      *
      * @param input               Object storing the attributes the newly created media record should have.
+     * @param creatorId           The id of the user that creates the media record
      * @param generateUploadUrl   If a temporary upload url should be generated for the media record
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record which was created, with the ID generated for it.
      */
-    public MediaRecord createMediaRecord(CreateMediaRecordInput input, boolean generateUploadUrl, boolean generateDownloadUrl) {
+    public MediaRecord createMediaRecord(CreateMediaRecordInput input,
+                                         UUID creatorId,
+                                         boolean generateUploadUrl,
+                                         boolean generateDownloadUrl) {
         MediaRecordEntity entity = modelMapper.map(input, MediaRecordEntity.class);
+
+        entity.setCreatorId(creatorId);
 
         repository.save(entity);
 

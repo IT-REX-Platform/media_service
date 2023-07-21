@@ -14,6 +14,10 @@ type MediaRecord {
   """
   name: String!
   """
+  User ID of the creator of the media record.
+  """
+  creatorId: UUID!
+  """
   Type of the media record
   """
   type: MediaType!
@@ -101,9 +105,13 @@ type Query {
   """
   mediaRecordsById(ids: [UUID!]!): [MediaRecord!]!
   """
-  Returns all media records
+  Returns all media records of the system.
   """
-  mediaRecords: [MediaRecord!]!
+  mediaRecords: [MediaRecord!]! @deprecated(reason: "In production there should probably be no way to get all media records of the system.")
+  """
+  Returns all media records which the current user created.
+  """
+  userMediaRecords: [MediaRecord!]!
   """
   Returns the media records associated the given content IDs as a list of lists where each sublist contains
   the media records associated with the content ID at the same index in the input list
@@ -124,6 +132,10 @@ type Mutation {
   Deletes the media record with the given UUID
   """
   deleteMediaRecord(id: UUID!): UUID!
+  """
+  Allows multiple media records to be linked/added to a content.
+  """
+  linkMediaRecordsWithContent(contentId: UUID!, mediaRecordIds: [UUID!]!): [MediaRecord!]!
   """
   Logs that a media has been worked on by the current user.
   See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
