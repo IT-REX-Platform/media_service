@@ -268,7 +268,16 @@ public class MediaService {
     public MediaRecord updateMediaRecord(UpdateMediaRecordInput input, boolean generateUploadUrl, boolean generateDownloadUrl) {
         requireMediaRecordExisting(input.getId());
 
-        MediaRecordEntity entity = repository.save(modelMapper.map(input, MediaRecordEntity.class));
+        MediaRecordEntity oldEntity = repository.getReferenceById(input.getId());
+
+        // generate new entity based on updated data
+        MediaRecordEntity newEntity = modelMapper.map(input, MediaRecordEntity.class);
+
+        // keep creator id from old entity
+        newEntity.setCreatorId(oldEntity.getCreatorId());
+
+        // save updated entity
+        MediaRecordEntity entity = repository.save(newEntity);
 
         //publish changes
         topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);

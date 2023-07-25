@@ -53,6 +53,7 @@ class QueryMediaRecordsTest {
                     mediaRecords {
                         id,
                         name,
+                        creatorId,
                         type,
                         contentIds
                     }
@@ -76,6 +77,7 @@ class QueryMediaRecordsTest {
                     mediaRecordsById(ids: ["%s", "%s"]) {
                         id,
                         name,
+                        creatorId,
                         type,
                         contentIds
                     }
@@ -99,6 +101,7 @@ class QueryMediaRecordsTest {
                     mediaRecordsByContentIds(contentIds: ["%s", "%s"]) {
                         id,
                         name,
+                        creatorId,
                         type,
                         contentIds
                     }
