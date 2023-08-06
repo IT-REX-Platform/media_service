@@ -54,7 +54,7 @@ services:
       - minio
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database-media:5432/media_service
-      MINIO_URL: http://host.docker.internal:9000
+      MINIO_URL: http://host.docker.internal:3010
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       MINIO_ACCESS_KEY: minioadmin
