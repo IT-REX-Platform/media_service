@@ -36,8 +36,8 @@ public class MediaController {
     }
 
     @QueryMapping
-    public List<MediaRecord> mediaRecordsById(@Argument List<UUID> ids, DataFetchingEnvironment env) {
-        return mediaService.getMediaRecordsById(
+    public List<MediaRecord> mediaRecordsByIds(@Argument List<UUID> ids, DataFetchingEnvironment env) {
+        return mediaService.getMediaRecordsByIds(
                 ids,
                 uploadUrlInSelectionSet(env),
                 downloadUrlInSelectionSet(env)

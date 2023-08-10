@@ -103,7 +103,7 @@ type Query {
   """
   Returns the media records with the given IDs
   """
-  mediaRecordsById(ids: [UUID!]!): [MediaRecord!]!
+  mediaRecordsByIds(ids: [UUID!]!): [MediaRecord!]!
   """
   Returns all media records of the system.
   """

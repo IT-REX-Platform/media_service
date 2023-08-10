@@ -69,12 +69,12 @@ class QueryMediaRecordsTest {
     }
 
     @Test
-    void testQueryMediaRecordsById(GraphQlTester tester) {
+    void testQueryMediaRecordsByIds(GraphQlTester tester) {
         List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
 
         String query = """
                 query {
-                    mediaRecordsById(ids: ["%s", "%s"]) {
+                    mediaRecordsByIds(ids: ["%s", "%s"]) {
                         id,
                         name,
                         creatorId,
@@ -86,7 +86,7 @@ class QueryMediaRecordsTest {
 
         tester.document(query)
                 .execute()
-                .path("mediaRecordsById").entityList(MediaRecord.class).hasSize(expectedMediaRecords.size())
+                .path("mediaRecordsByIds").entityList(MediaRecord.class).hasSize(expectedMediaRecords.size())
                 .contains(expectedMediaRecords.stream()
                         .map(x -> mapper.map(x, MediaRecord.class))
                         .toArray(MediaRecord[]::new));

@@ -76,7 +76,7 @@ public class MediaService {
      * @throws EntityNotFoundException Thrown when one or more passed ids do not have corresponding media records in
      *                                 the database.
      */
-    public List<MediaRecord> getMediaRecordsById(List<UUID> ids, boolean generateUploadUrls, boolean generateDownloadUrls) {
+    public List<MediaRecord> getMediaRecordsByIds(List<UUID> ids, boolean generateUploadUrls, boolean generateDownloadUrls) {
         List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
 
         // if there are fewer returned records than passed ids, that means that some ids could not be found in the
