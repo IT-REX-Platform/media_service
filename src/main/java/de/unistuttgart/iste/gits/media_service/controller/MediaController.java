@@ -44,6 +44,14 @@ public class MediaController {
         );
     }
 
+    @QueryMapping List<MediaRecord> findMediaRecordsByIds(@Argument List<UUID> ids, DataFetchingEnvironment env) {
+        return mediaService.findMediaRecordsByIds(
+                ids,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
+    }
+
     @QueryMapping
     public List<MediaRecord> userMediaRecords(@ContextValue LoggedInUser currentUser, DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsForUser(

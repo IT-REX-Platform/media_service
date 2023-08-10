@@ -97,6 +97,37 @@ public class MediaService {
         );
     }
 
+    /**
+     * The same as {@link #getMediaRecordsByIds(List, boolean, boolean)}, except that it doesn't throw an exception
+     * if an entity cannot be found. Instead, it returns NULL for that entity.
+     *
+     * @return Returns a List containing the MediaRecords with the specified ids. If a media record for an id cannot
+     *         be found, returns NULL for that media record instead.
+     */
+    public List<MediaRecord> findMediaRecordsByIds(List<UUID> ids, boolean generateUploadUrls, boolean generateDownloadUrls) {
+        List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
+
+        List<MediaRecord> result = new ArrayList<>(ids.size());
+
+        // go over all requested ids
+        for (UUID id : ids) {
+            // get the entity with the matching id or NULL if it doesn't exist
+            MediaRecordEntity entity = records.stream().filter(x -> x.getId().equals(id)).findAny().orElse(null);
+            MediaRecord record = null;
+            // if we found an entity, convert it to a DTO
+            if(entity != null) {
+                record = modelMapper.map(entity, MediaRecord.class);
+            }
+            result.add(record);
+        }
+
+        return fillMediaRecordsUrlsIfRequested(
+                result,
+                generateUploadUrls,
+                generateDownloadUrls
+        );
+    }
+
     public MediaRecord getMediaRecordById(UUID id) {
         requireMediaRecordExisting(id);
         return mapEntityToMediaRecord(repository.getReferenceById(id));
