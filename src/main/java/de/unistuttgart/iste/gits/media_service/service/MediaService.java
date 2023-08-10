@@ -113,12 +113,12 @@ public class MediaService {
         for (UUID id : ids) {
             // get the entity with the matching id or NULL if it doesn't exist
             MediaRecordEntity entity = records.stream().filter(x -> x.getId().equals(id)).findAny().orElse(null);
-            MediaRecord record = null;
+            MediaRecord mediaRecord = null;
             // if we found an entity, convert it to a DTO
             if(entity != null) {
-                record = modelMapper.map(entity, MediaRecord.class);
+                mediaRecord = modelMapper.map(entity, MediaRecord.class);
             }
-            result.add(record);
+            result.add(mediaRecord);
         }
 
         return fillMediaRecordsUrlsIfRequested(
