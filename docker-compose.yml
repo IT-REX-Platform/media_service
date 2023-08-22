@@ -2,7 +2,7 @@ version: "3"
 services:
   minio:
     image: quay.io/minio/minio:latest
-    command: server --console-address ":9090" /miniodata
+    command: server --console-address ":3011" /miniodata
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin

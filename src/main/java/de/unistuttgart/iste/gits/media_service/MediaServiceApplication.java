@@ -5,21 +5,27 @@ import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.stereotype.Component;
 
-import javax.print.attribute.standard.Media;
-import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.List;
+
 
 /**
  * This is the entry point of the application.
  */
 @SpringBootApplication
+@Slf4j
 public class MediaServiceApplication {
+
+    private static final Logger logger = LoggerFactory.getLogger(MediaServiceApplication.class);
 
     public static void main(String[] args) {
         SpringApplication.run(MediaServiceApplication.class, args);
@@ -37,16 +43,15 @@ public class MediaServiceApplication {
         @Override
         @SneakyThrows
         public void run(String...args) {
-
             List<String> buckets =  Arrays.stream(MediaType.values()).map(type -> type.toString().toLowerCase()).toList();
 
             for (String bucket : buckets) {
                 boolean bucket_exists = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
                 if (!bucket_exists) {
                     minioInternalClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-                    System.out.println("Bucket " + bucket + " created.");
+                    logger.info("Bucket {} created.", bucket);
                 } else {
-                    System.out.println("Bucket " + bucket + " already exists.");
+                    logger.info("Bucket {} already exists.", bucket);
                 }
             }
         }

@@ -115,7 +115,7 @@ public class MediaService {
             MediaRecordEntity entity = records.stream().filter(x -> x.getId().equals(id)).findAny().orElse(null);
             MediaRecord mediaRecord = null;
             // if we found an entity, convert it to a DTO
-            if(entity != null) {
+            if (entity != null) {
                 mediaRecord = modelMapper.map(entity, MediaRecord.class);
             }
             result.add(mediaRecord);
@@ -135,6 +135,7 @@ public class MediaService {
 
     /**
      * Gets all media records for which the specified user is the creator.
+     *
      * @param userId The id of the user to get the media records for.
      * @return Returns a list of the user's media records.
      */
@@ -196,7 +197,8 @@ public class MediaService {
 
     /**
      * Links the media records with the passed ids to the content with the passed id.
-     * @param contentId The content id to link the media records to.
+     *
+     * @param contentId      The content id to link the media records to.
      * @param mediaRecordIds The ids of the media records to link to the content.
      * @return Returns a list of the media records that were linked to the content.
      */
@@ -214,7 +216,7 @@ public class MediaService {
                     .formatted(missingIds.stream().map(UUID::toString).collect(Collectors.joining(", "))));
         }
 
-        for(MediaRecordEntity entity : entities) {
+        for (MediaRecordEntity entity : entities) {
             entity.getContentIds().add(contentId);
             repository.save(entity);
         }
@@ -270,16 +272,13 @@ public class MediaService {
         repository.delete(entity);
 
 
-        boolean bucketExists = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
-        if (bucketExists) {
-            if (isObjectExist(filename, bucketId)) {
-                minioInternalClient.removeObject(
-                        RemoveObjectArgs
-                                .builder()
-                                .bucket(bucketId)
-                                .object(filename)
-                                .build());
-            }
+        if (isObjectExist(filename, bucketId)) {
+            minioInternalClient.removeObject(
+                    RemoveObjectArgs
+                            .builder()
+                            .bucket(bucketId)
+                            .object(filename)
+                            .build());
         }
 
         //publish changes
@@ -444,17 +443,18 @@ public class MediaService {
      * function that updates all media records that contain at least one of the received content IDs.
      * All received content Ids are removed from the media records.
      * If changes are performed to an entity, a message is published to a dapr topic.
+     *
      * @param dto Event object containing a list of content IDs and a CRUD operation
      */
-    public void removeContentIds(ContentChangeEvent dto){
+    public void removeContentIds(ContentChangeEvent dto) {
 
         // check if DTO is complete
-        if (dto.getContentIds() == null  || dto.getOperation() == null){
+        if (dto.getContentIds() == null || dto.getOperation() == null) {
             throw new NullPointerException("incomplete message received: all fields of a message must be non-null");
         }
 
         //This method should only process Content Deletion Events
-        if (!dto.getOperation().equals(CrudOperation.DELETE) || dto.getContentIds().isEmpty()){
+        if (!dto.getOperation().equals(CrudOperation.DELETE) || dto.getContentIds().isEmpty()) {
             return;
         }
 
@@ -462,12 +462,12 @@ public class MediaService {
         List<MediaRecordEntity> entities = repository.findMediaRecordEntitiesByContentIds(dto.getContentIds());
 
         // apply changes to all found media records
-        for (MediaRecordEntity entity: entities) {
+        for (MediaRecordEntity entity : entities) {
 
             //is true if changes are applied
             boolean listChanged = entity.getContentIds().removeAll(dto.getContentIds());
 
-            if (listChanged){
+            if (listChanged) {
                 repository.save(entity);
                 //publish changes to dapr topic
                 topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
