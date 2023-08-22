@@ -372,12 +372,6 @@ public class MediaService {
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
-        // Ensures that the Bucket exists or creates a new one otherwise. Weirdly this only works if at least one bucket already exists.
-        boolean found = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucketId).build());
-        if (!found) {
-            minioInternalClient.makeBucket(MakeBucketArgs.builder().bucket(bucketId).build());
-        }
-
         return minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs
                         .builder()
@@ -399,7 +393,6 @@ public class MediaService {
         Map<String, String> variables = createMinIOVariables(mediaRecordId);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
-
 
         return minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
@@ -435,7 +428,6 @@ public class MediaService {
         try {
 
             minioInternalClient.statObject(StatObjectArgs.builder()
-
                     .bucket(bucketname)
                     .object(name).build());
             return true;
