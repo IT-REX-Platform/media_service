@@ -8,7 +8,10 @@ import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
-import io.minio.*;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.MinioClient;
+import io.minio.RemoveObjectArgs;
+import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import jakarta.persistence.EntityNotFoundException;
@@ -265,7 +268,8 @@ public class MediaService {
     public UUID deleteMediaRecord(UUID id) {
         requireMediaRecordExisting(id);
         MediaRecordEntity entity = repository.getReferenceById(id);
-        Map<String, String> minioVariables = createMinIOVariables(id);
+        MediaRecord mediaRecord = mapEntityToMediaRecord(entity);
+        Map<String, String> minioVariables = createMinIOVariables(mediaRecord);
         String bucketId = minioVariables.get(BUCKET_ID);
         String filename = minioVariables.get(FILENAME);
 
@@ -349,11 +353,11 @@ public class MediaService {
      */
     private MediaRecord fillMediaRecordUrlsIfRequested(MediaRecord mediaRecord, boolean generateUploadUrl, boolean generateDownloadUrl) {
         if (generateUploadUrl) {
-            mediaRecord.setUploadUrl(createUploadUrl(mediaRecord.getId()));
+            mediaRecord.setUploadUrl(createUploadUrl(mediaRecord));
         }
 
         if (generateDownloadUrl) {
-            mediaRecord.setDownloadUrl(createDownloadUrl(mediaRecord.getId()));
+            mediaRecord.setDownloadUrl(createDownloadUrl(mediaRecord));
         }
 
         return mediaRecord;
@@ -362,12 +366,12 @@ public class MediaService {
     /**
      * Creates a URL for uploading a file to the minIO Server.
      *
-     * @param mediaRecordId UUID of the media record to generate the upload url for.
+     * @param mediaRecord UUID of the media record to generate the upload url for.
      * @return Returns the created uploadURL.
      */
     @SneakyThrows
-    private String createUploadUrl(UUID mediaRecordId) {
-        Map<String, String> variables = createMinIOVariables(mediaRecordId);
+    private String createUploadUrl(MediaRecord mediaRecord) {
+        Map<String, String> variables = createMinIOVariables(mediaRecord);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
@@ -384,12 +388,12 @@ public class MediaService {
     /**
      * Creates a URL for downloading a file from the MinIO Server.
      *
-     * @param mediaRecordId UUID of the media record to generate the download url for.
+     * @param mediaRecord UUID of the media record to generate the download url for.
      * @return Returns the created downloadURL.
      */
     @SneakyThrows
-    private String createDownloadUrl(UUID mediaRecordId) {
-        Map<String, String> variables = createMinIOVariables(mediaRecordId);
+    private String createDownloadUrl(MediaRecord mediaRecord) {
+        Map<String, String> variables = createMinIOVariables(mediaRecord);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
@@ -405,19 +409,15 @@ public class MediaService {
     /**
      * Creates the bucketId and filename for MinIO from the media record.
      *
-     * @param input UUID of the media record
+     * @param mediaRecord UUID of the media record
      * @return a map with the bucketID and filename which should be used by MinIO
      */
-    private Map<String, String> createMinIOVariables(UUID input) {
+    private Map<String, String> createMinIOVariables(MediaRecord mediaRecord) {
         Map<String, String> variables = new HashMap<>();
 
-        requireMediaRecordExisting(input);
-
-        MediaRecordEntity entity = repository.getReferenceById(input);
-
-        String filename = entity.getId().toString();
+        String filename = mediaRecord.getId().toString();
         variables.put(FILENAME, filename);
-        String bucketId = entity.getType().toString().toLowerCase();
+        String bucketId = mediaRecord.getType().toString().toLowerCase();
         variables.put(BUCKET_ID, bucketId);
 
         return variables;
