@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +21,7 @@ import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepos
 @GraphQlApiTest
 @Transactional
 @TablesToDelete({"media_record_content_ids", "media_record"})
+@ActiveProfiles("test")
 class QueryMediaRecordsTest {
 
     @Autowired

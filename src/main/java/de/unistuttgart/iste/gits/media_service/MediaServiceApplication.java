@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 
@@ -32,6 +33,7 @@ public class MediaServiceApplication {
     }
 
     @Component
+    @Profile("!test")
     public static class CommandLineAppStartupRunner implements CommandLineRunner {
 
         private final MinioClient minioInternalClient;
