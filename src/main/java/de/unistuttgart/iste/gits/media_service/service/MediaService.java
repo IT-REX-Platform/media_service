@@ -65,7 +65,9 @@ public class MediaService {
      * @return Returns a list containing all saved media records.
      */
     public List<MediaRecord> getAllMediaRecords(boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecordEntity> records = repository.findAll();
+        List<MediaRecord> records = repository.findAll().stream()
+                .map(this::mapEntityToMediaRecord)
+                .toList();
 
         return fillMediaRecordsUrlsIfRequested(records, generateUploadUrls, generateDownloadUrls);
     }
@@ -96,7 +98,7 @@ public class MediaService {
         }
 
         return fillMediaRecordsUrlsIfRequested(
-                records,
+                records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
                 generateUploadUrls,
                 generateDownloadUrls
         );
@@ -127,7 +129,7 @@ public class MediaService {
         }
 
         return fillMediaRecordsUrlsIfRequested(
-                records,
+                result,
                 generateUploadUrls,
                 generateDownloadUrls
         );
@@ -148,7 +150,7 @@ public class MediaService {
         List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByCreatorId(userId);
 
         return fillMediaRecordsUrlsIfRequested(
-                records,
+                records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
                 generateUploadUrls,
                 generateDownloadUrls
         );
@@ -185,7 +187,8 @@ public class MediaService {
             }
         }
 
-        fillMediaRecordsUrlsIfRequested(records, generateUploadUrls, generateDownloadUrls);
+        result.forEach(x -> fillMediaRecordsUrlsIfRequested(x, generateUploadUrls, generateDownloadUrls));
+
 
         return result;
     }
@@ -252,7 +255,7 @@ public class MediaService {
         topicPublisher.notifyResourceChange(entity, CrudOperation.CREATE);
 
         return fillMediaRecordUrlsIfRequested(
-                entity,
+                mapEntityToMediaRecord(entity),
                 generateUploadUrl,
                 generateDownloadUrl
         );
@@ -318,7 +321,7 @@ public class MediaService {
         topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
 
         return fillMediaRecordUrlsIfRequested(
-                entity,
+                mapEntityToMediaRecord(entity),
                 generateUploadUrl,
                 generateDownloadUrl
         );
@@ -335,10 +338,10 @@ public class MediaService {
      * @param mediaRecords The list of media records to fill the urls for.
      * @return Returns the same list (which has been modified in-place) with the media records with the now added urls.
      */
-    private List<MediaRecord> fillMediaRecordsUrlsIfRequested(List<MediaRecordEntity> mediaRecords, boolean generateUploadUrls, boolean generateDownloadUrls) {
+    private List<MediaRecord> fillMediaRecordsUrlsIfRequested(List<MediaRecord> mediaRecords, boolean generateUploadUrls, boolean generateDownloadUrls) {
         List<MediaRecord> records = new ArrayList<>();
 
-        for (MediaRecordEntity mediaRecord : mediaRecords) {
+        for (MediaRecord mediaRecord : mediaRecords) {
             records.add(fillMediaRecordUrlsIfRequested(mediaRecord, generateUploadUrls, generateDownloadUrls));
         }
 
@@ -349,33 +352,36 @@ public class MediaService {
      * Helper method which adds a generated upload and/or download url to the passed media record and returns that same
      * media record.
      *
-     * @param mediaRecordEntity         The media record to add the urls to.
+     * @param mediaRecord        The media record to add the urls to.
      * @param generateUploadUrl   If an upload url should be generated.
      * @param generateDownloadUrl If a download url should be generated
      * @return Returns the same media record that has been passed to the method.
      */
-    private MediaRecord fillMediaRecordUrlsIfRequested(MediaRecordEntity mediaRecordEntity, boolean generateUploadUrl, boolean generateDownloadUrl) {
+    private MediaRecord fillMediaRecordUrlsIfRequested(MediaRecord mediaRecord, boolean generateUploadUrl, boolean generateDownloadUrl) {
 
         if (generateUploadUrl) {
-            String uploadUrl = mediaRecordEntity.getUploadUrl();
+            String uploadUrl = mediaRecord.getUploadUrl();
             if (uploadUrl == null || isExpired(uploadUrl)) {
-                mediaRecordEntity.setUploadUrl(createUploadUrl(mediaRecordEntity));
-                repository.save(mediaRecordEntity);
+                mediaRecord.setUploadUrl(createUploadUrl(mediaRecord));
             }
 
         }
 
         if (generateDownloadUrl) {
-            String downloadUrl = mediaRecordEntity.getDownloadUrl();
+            String downloadUrl = mediaRecord.getDownloadUrl();
             if (downloadUrl == null || isExpired(downloadUrl)) {
-                mediaRecordEntity.setDownloadUrl(createDownloadUrl(mediaRecordEntity));
-                repository.save(mediaRecordEntity);
+                mediaRecord.setDownloadUrl(createDownloadUrl(mediaRecord));
             }
         }
 
-        return mapEntityToMediaRecord(mediaRecordEntity);
+        return mediaRecord;
     }
 
+    /**
+     * Checks if the download and upload url are expired and need to be recreated.
+     * @param url that should be checked
+     * @return true if the url is expired, false otherwise
+     */
     private boolean isExpired(String url) {
         Pattern pat = Pattern.compile("([^&=]+)=([^&]*)");
         Matcher matcher = pat.matcher(url);
@@ -402,12 +408,16 @@ public class MediaService {
      * @return Returns the created uploadURL.
      */
     @SneakyThrows
-    private String createUploadUrl(MediaRecordEntity mediaRecord) {
-        Map<String, String> variables = createMinIOVariables(mediaRecord);
+    private String createUploadUrl(MediaRecord mediaRecord) {
+
+        requireMediaRecordExisting(mediaRecord.getId());
+
+        MediaRecordEntity entity = repository.getReferenceById(mediaRecord.getId());
+        Map<String, String> variables = createMinIOVariables(entity);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
-        return minioExternalClient.getPresignedObjectUrl(
+        String uploadUrl = minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs
                         .builder()
                         .method(Method.PUT)
@@ -415,6 +425,9 @@ public class MediaService {
                         .object(filename)
                         .expiry(15, TimeUnit.MINUTES)
                         .build());
+        entity.setUploadUrl(uploadUrl);
+        repository.save(entity);
+        return uploadUrl;
     }
 
     /**
@@ -424,18 +437,24 @@ public class MediaService {
      * @return Returns the created downloadURL.
      */
     @SneakyThrows
-    private String createDownloadUrl(MediaRecordEntity mediaRecord) {
-        Map<String, String> variables = createMinIOVariables(mediaRecord);
+    private String createDownloadUrl(MediaRecord mediaRecord) {
+        requireMediaRecordExisting(mediaRecord.getId());
+
+        MediaRecordEntity entity = repository.getReferenceById(mediaRecord.getId());
+        Map<String, String> variables = createMinIOVariables(entity);
         String bucketId = variables.get(BUCKET_ID);
         String filename = variables.get(FILENAME);
 
-        return minioExternalClient.getPresignedObjectUrl(
+        String downloadUrl =  minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
                         .bucket(bucketId)
                         .object(filename)
                         .expiry(15, TimeUnit.MINUTES)
                         .build());
+        entity.setDownloadUrl(downloadUrl);
+        repository.save(entity);
+        return downloadUrl;
     }
 
     /**
