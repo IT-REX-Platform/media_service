@@ -20,7 +20,7 @@ public class MediaRecordEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     @NotNull(message = "Name must not be null")
     @Length(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
     private String name;
@@ -33,6 +33,14 @@ public class MediaRecordEntity {
 
     @ElementCollection
     private List<UUID> contentIds;
+
+    @Column(length = 500)
+    private String uploadUrl;
+
+    @Column(length = 500)
+    private String downloadUrl;
+
+
 
     @OneToMany(mappedBy = "primaryKey.mediaRecordId", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
