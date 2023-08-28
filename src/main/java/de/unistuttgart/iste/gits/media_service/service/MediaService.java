@@ -383,17 +383,24 @@ public class MediaService {
      * @return true if the url is expired, false otherwise
      */
     private boolean isExpired(String url) {
-        Pattern pat = Pattern.compile("([^&=]+)=([^&]*)");
-        Matcher matcher = pat.matcher(url);
-        Map<String,String> map = new HashMap<>();
-        while (matcher.find()) {
-            map.put(matcher.group(1), matcher.group(2));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss").withZone(ZoneOffset.UTC);
+        Pattern datePattern = Pattern.compile("X-Amz-Date=([0-9]*T[0-9]*)");
+        Matcher dateMatcher = datePattern.matcher(url);
+        Pattern expiryPattern = Pattern.compile("X-Amz-Expires=([0-9]*)");
+        Matcher expiryMatcher = expiryPattern.matcher(url);
+
+        String dateString = "";
+        while (dateMatcher.find()) {
+            dateString = dateMatcher.group(1);
+
+        }
+        long expiryString = 0;
+        while (expiryMatcher.find()) {
+            expiryString = Long.parseLong(expiryMatcher.group(1));
         }
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
-
-        ZonedDateTime date = ZonedDateTime.parse(map.get("X-Amz-Date"), formatter);
-        int expiry = Integer.parseInt(map.get("X-Amz-Expires"));
+        ZonedDateTime date = ZonedDateTime.parse(dateString, formatter);
+        long expiry = expiryString;
 
         ZonedDateTime expiration = date.plusSeconds(expiry-300);
 
