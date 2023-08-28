@@ -6,14 +6,11 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-
 
 import java.util.Arrays;
 import java.util.List;
@@ -25,8 +22,6 @@ import java.util.List;
 @SpringBootApplication
 @Slf4j
 public class MediaServiceApplication {
-
-    private static final Logger logger = LoggerFactory.getLogger(MediaServiceApplication.class);
 
     public static void main(String[] args) {
         SpringApplication.run(MediaServiceApplication.class, args);
@@ -51,9 +46,9 @@ public class MediaServiceApplication {
                 boolean bucket_exists = minioInternalClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
                 if (!bucket_exists) {
                     minioInternalClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-                    logger.info("Bucket {} created.", bucket);
+                    log.info("Bucket {} created.", bucket);
                 } else {
-                    logger.info("Bucket {} already exists.", bucket);
+                    log.info("Bucket {} already exists.", bucket);
                 }
             }
         }
