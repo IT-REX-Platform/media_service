@@ -45,7 +45,7 @@ class MutationDeleteMediaRecordTest {
                 .path("deleteMediaRecord").entity(UUID.class).isEqualTo(createdMediaRecords.get(0).getId());
 
         // ensure that the media record left in the db is the other one (the one we didn't delete)
-        assertThat(repository.count(), is((long)createdMediaRecords.size() - 1));
+        assertThat(repository.count(), is((long) createdMediaRecords.size() - 1));
         MediaRecordEntity remainingMediaRecord = repository.findAll().get(0);
         assertThat(remainingMediaRecord, equalTo(createdMediaRecords.get(1)));
     }

@@ -1,0 +1,27 @@
+type Mutation {
+    """
+    Creates a new media record
+    """
+    createMediaRecord(input: CreateMediaRecordInput!): MediaRecord!
+    """
+    Updates an existing media record with the given UUID
+    """
+    updateMediaRecord(input: UpdateMediaRecordInput!): MediaRecord!
+    """
+    Deletes the media record with the given UUID
+    """
+    deleteMediaRecord(id: UUID!): UUID!
+    """
+    Allows multiple media records to be linked/added to a content.
+    """
+    linkMediaRecordsWithContent(contentId: UUID!, mediaRecordIds: [UUID!]!): [MediaRecord!]!
+    """
+    Logs that a media has been worked on by the current user.
+    See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
+
+    Possible side effects:
+    When all media records of a content have been worked on by a user,
+    a user-progress event is emitted for the content.
+    """
+    logMediaRecordWorkedOn(mediaRecordId: UUID!): MediaRecord!
+}

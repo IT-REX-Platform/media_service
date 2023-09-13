@@ -35,6 +35,7 @@ public class MediaService {
     public static final String BUCKET_ID = "bucketId";
     public static final String FILENAME = "filename";
     public static final String MEDIA_RECORDS_NOT_FOUND = "Media record(s) with id(s) %s not found.";
+
     private final MinioClient minioInternalClient;
     private final MinioClient minioExternalClient;
 
