@@ -1,6 +1,6 @@
 package de.unistuttgart.iste.gits.media_service.persistence.repository;
 
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

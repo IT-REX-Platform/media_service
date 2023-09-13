@@ -1,7 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
 import de.unistuttgart.iste.gits.common.testutil.TablesToDelete;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import de.unistuttgart.iste.gits.media_service.test_config.MockMinIoClientConfiguration;
 import jakarta.persistence.EntityNotFoundException;
@@ -42,7 +42,8 @@ class MediaServiceTest {
         List<MediaRecordEntity> entities = fillRepositoryWithMediaRecords(repository);
 
         assertDoesNotThrow(() -> service.requireMediaRecordExisting(entities.get(0).getId()));
-        assertThrows(EntityNotFoundException.class, () -> service.requireMediaRecordExisting(UUID.randomUUID()));
+        UUID notExistingId = UUID.randomUUID();
+        assertThrows(EntityNotFoundException.class, () -> service.requireMediaRecordExisting(notExistingId));
     }
 
     @Test

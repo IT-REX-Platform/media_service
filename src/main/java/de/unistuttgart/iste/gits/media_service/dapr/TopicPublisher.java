@@ -1,9 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.dapr;
 
-import de.unistuttgart.iste.gits.common.event.CrudOperation;
-import de.unistuttgart.iste.gits.common.event.ResourceUpdateEvent;
-import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.common.event.*;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import io.dapr.client.DaprClient;
 import lombok.extern.slf4j.Slf4j;
 

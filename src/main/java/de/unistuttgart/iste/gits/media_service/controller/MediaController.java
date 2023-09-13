@@ -1,10 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.controller;
 
 import de.unistuttgart.iste.gits.common.user_handling.LoggedInUser;
-import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
-import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
-import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
-import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
+import de.unistuttgart.iste.gits.generated.dto.*;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
 import graphql.schema.DataFetchingEnvironment;
@@ -44,7 +41,8 @@ public class MediaController {
         );
     }
 
-    @QueryMapping List<MediaRecord> findMediaRecordsByIds(@Argument List<UUID> ids, DataFetchingEnvironment env) {
+    @QueryMapping
+    public List<MediaRecord> findMediaRecordsByIds(@Argument List<UUID> ids, DataFetchingEnvironment env) {
         return mediaService.findMediaRecordsByIds(
                 ids,
                 uploadUrlInSelectionSet(env),
@@ -62,7 +60,7 @@ public class MediaController {
     }
 
     @QueryMapping
-    List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds, DataFetchingEnvironment env) {
+    public List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds, DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsByContentIds(
                 contentIds,
                 uploadUrlInSelectionSet(env),
