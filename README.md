@@ -8,18 +8,5 @@ The Media Service is a component designed to fulfill the following functions wit
 
 3. **GraphQL Endpoint:** Users can interact with the service through a GraphQL endpoint, enabling the retrieval of URLs for uploading and downloading media files.
 
-## Purpose
-
-1. **Content Upload and Management:**
-
-   The Media Service supports educators by offering a platform to manage various multimedia content types. Educators can enhance their teaching materials with a range of resources.
-
-2. **MinIO Object Storage Integration:**
-
-   Efficient storage is achieved by integrating with the MinIO object storage system. This integration ensures access to media files.
-
-3. **GraphQL Endpoint:**
-
-   Through the GraphQL endpoint, users can interact with the service to retrieve URLs for uploading and downloading media files.
 
 
