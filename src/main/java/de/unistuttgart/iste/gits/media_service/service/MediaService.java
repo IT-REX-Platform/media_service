@@ -2,6 +2,7 @@ package de.unistuttgart.iste.gits.media_service.service;
 
 import de.unistuttgart.iste.gits.common.event.ContentChangeEvent;
 import de.unistuttgart.iste.gits.common.event.CrudOperation;
+import de.unistuttgart.iste.gits.common.exception.IncompleteEventMessageException;
 import de.unistuttgart.iste.gits.generated.dto.*;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
@@ -507,11 +508,11 @@ public class MediaService {
      *
      * @param dto Event object containing a list of content IDs and a CRUD operation
      */
-    public void removeContentIds(ContentChangeEvent dto) {
+    public void removeContentIds(ContentChangeEvent dto) throws IncompleteEventMessageException {
 
         // check if DTO is complete
         if (dto.getContentIds() == null || dto.getOperation() == null) {
-            throw new NullPointerException("incomplete message received: all fields of a message must be non-null");
+            throw new IncompleteEventMessageException(IncompleteEventMessageException.ERROR_INCOMPLETE_MESSAGE);
         }
 
         //This method should only process Content Deletion Events

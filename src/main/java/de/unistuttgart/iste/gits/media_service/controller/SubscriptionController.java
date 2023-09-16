@@ -30,7 +30,7 @@ public class SubscriptionController {
             try {
                 mediaService.removeContentIds(cloudEvent.getData());
             } catch (Exception e) {
-                log.error("Error while processing content change event", e);
+                log.error("Error while processing content-changes event. {}", e.getMessage());
             }
         });
     }
