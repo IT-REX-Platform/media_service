@@ -2,11 +2,11 @@ type Mutation {
     """
     Creates a new media record
     """
-    createMediaRecord(input: CreateMediaRecordInput!): MediaRecord!
+    _internal_createMediaRecord(courseId: [UUID], input: CreateMediaRecordInput!): MediaRecord!
     """
     Updates an existing media record with the given UUID
     """
-    updateMediaRecord(input: UpdateMediaRecordInput!): MediaRecord!
+    updateMediaRecord(courseId: [UUID], input: UpdateMediaRecordInput!): MediaRecord!
     """
     Deletes the media record with the given UUID
     """

@@ -74,10 +74,12 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord createMediaRecord(@Argument CreateMediaRecordInput input,
+    public MediaRecord _internal_createMediaRecord(@Argument UUID[] courseIds,
+            @Argument CreateMediaRecordInput input,
                                          @ContextValue LoggedInUser currentUser,
                                          DataFetchingEnvironment env) {
         return mediaService.createMediaRecord(
+                courseIds,
                 input,
                 currentUser.getId(),
                 uploadUrlInSelectionSet(env),
@@ -91,8 +93,9 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord updateMediaRecord(@Argument UpdateMediaRecordInput input, DataFetchingEnvironment env) {
+    public MediaRecord updateMediaRecord(@Argument UUID[] courseIds, @Argument UpdateMediaRecordInput input, DataFetchingEnvironment env) {
         return mediaService.updateMediaRecord(
+                courseIds,
                 input,
                 uploadUrlInSelectionSet(env),
                 downloadUrlInSelectionSet(env)
