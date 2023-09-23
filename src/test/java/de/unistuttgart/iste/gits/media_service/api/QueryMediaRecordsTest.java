@@ -34,6 +34,7 @@ class QueryMediaRecordsTest {
                 query {
                     mediaRecords {
                         id,
+                        courseIds,
                         name,
                         type,
                         contentIds
@@ -54,6 +55,7 @@ class QueryMediaRecordsTest {
                 query {
                     mediaRecords {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -78,6 +80,7 @@ class QueryMediaRecordsTest {
                 query {
                     mediaRecordsByIds(ids: ["%s", "%s"]) {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -104,6 +107,7 @@ class QueryMediaRecordsTest {
                 query($ids: [UUID!]!) {
                     findMediaRecordsByIds(ids: $ids) {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -127,6 +131,7 @@ class QueryMediaRecordsTest {
                 query {
                     mediaRecordsByContentIds(contentIds: ["%s", "%s"]) {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
