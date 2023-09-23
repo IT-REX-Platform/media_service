@@ -15,6 +15,7 @@
 | MINIO_URL                  | URL of the Minio server                   | http://localhost:3010                          | http://minio:9000/                                               |
 | minio.external.url         | URL of external minio                     | https://minio.it-rex.ch/                       | https://minio.it-rex.ch/                                         |
 | server.port                | Port on which the application runs        | 3001                                           | 3001                                                             |
+ | mediarecord.delete.cron   | Cron Expression for deleting mediarecords | 0 0 3 * * *                                    | 0 0 3 * * *                                                      |
 
 ### Other properties
 | Name                                      | Description                               | Value in Dev Environment                | Value in Prod Environment               |
