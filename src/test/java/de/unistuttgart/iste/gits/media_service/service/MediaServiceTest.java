@@ -35,7 +35,7 @@ class MediaServiceTest {
 
     @Test
     void testRequireMediaRecordExisting() {
-        MediaRecordEntity entity = MediaRecordEntity.builder()
+        final MediaRecordEntity entity = MediaRecordEntity.builder()
                 .id(UUID.randomUUID())
                 .contentIds(List.of(UUID.randomUUID()))
                 .creatorId(UUID.randomUUID())
@@ -45,13 +45,14 @@ class MediaServiceTest {
 
         assertThat(service.requireMediaRecordExisting(entity.getId()), is(entity));
 
-        UUID notExistingId = UUID.randomUUID();
+        final UUID notExistingId = UUID.randomUUID();
         assertThrows(EntityNotFoundException.class, () -> service.requireMediaRecordExisting(notExistingId));
     }
 
     @Test
     void testGetMediaRecordById() {
-        MediaRecordEntity entity = MediaRecordEntity.builder()
+
+        final MediaRecordEntity entity = MediaRecordEntity.builder()
                 .id(UUID.randomUUID())
                 .contentIds(List.of(UUID.randomUUID()))
                 .creatorId(UUID.randomUUID())
@@ -59,7 +60,25 @@ class MediaServiceTest {
                 .build();
 
         when(repository.findById(entity.getId())).thenReturn(Optional.of(entity));
-        MediaRecordEntity actual = mapper.map(service.getMediaRecordById(entity.getId()), MediaRecordEntity.class);
+        final MediaRecordEntity actual = mapper.map(service.getMediaRecordById(entity.getId()), MediaRecordEntity.class);
+
+        assertThat(actual, is(entity));
+    }
+
+    @Test
+    void testGetMediaRecordByIdWithCourseIds() {
+        final List<UUID> courseIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+        final MediaRecordEntity entity = MediaRecordEntity.builder()
+                .id(UUID.randomUUID())
+                .courseIds(courseIds)
+                .contentIds(List.of(UUID.randomUUID()))
+                .creatorId(UUID.randomUUID())
+                .progressData(List.of())
+                .build();
+
+        when(repository.findById(entity.getId())).thenReturn(Optional.of(entity));
+        final MediaRecordEntity actual = mapper.map(service.getMediaRecordById(entity.getId()), MediaRecordEntity.class);
 
         assertThat(actual, is(entity));
     }

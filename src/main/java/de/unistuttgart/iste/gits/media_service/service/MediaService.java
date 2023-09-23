@@ -249,14 +249,20 @@ public class MediaService {
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record which was created, with the ID generated for it.
      */
-    public MediaRecord createMediaRecord(final UUID[] courseIds, final CreateMediaRecordInput input,
+    public MediaRecord createMediaRecord(final List<UUID> courseIds, final CreateMediaRecordInput input,
                                          final UUID creatorId,
                                          final boolean generateUploadUrl,
                                          final boolean generateDownloadUrl) {
         final MediaRecordEntity entity = modelMapper.map(input, MediaRecordEntity.class);
 
         entity.setCreatorId(creatorId);
-        entity.setCourseIds(courseIds);
+
+        if (courseIds == null || courseIds.isEmpty()) {
+           entity.setCourseIds(Collections.emptyList());
+        } else {
+            entity.setCourseIds(courseIds);
+        }
+
 
         repository.save(entity);
 
@@ -311,7 +317,7 @@ public class MediaService {
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record with its newly updated data.
      */
-    public MediaRecord updateMediaRecord(final UUID[] courseIds, final UpdateMediaRecordInput input, final boolean generateUploadUrl, final boolean generateDownloadUrl) {
+    public MediaRecord updateMediaRecord(final List<UUID> courseIds, final UpdateMediaRecordInput input, final boolean generateUploadUrl, final boolean generateDownloadUrl) {
         final MediaRecordEntity oldEntity = requireMediaRecordExisting(input.getId());
 
         // generate new entity based on updated data
@@ -320,7 +326,11 @@ public class MediaService {
         // keep creator id from old entity
         newEntity.setCreatorId(oldEntity.getCreatorId());
         // update with current courseIds
-        newEntity.setCourseIds(courseIds);
+        if (courseIds == null || courseIds.isEmpty()) {
+            newEntity.setCourseIds(Collections.emptyList());
+        } else {
+            newEntity.setCourseIds(courseIds);
+        }
 
         // save updated entity
         final MediaRecordEntity entity = repository.save(newEntity);

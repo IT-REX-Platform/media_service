@@ -14,16 +14,18 @@ public class MediaRecordRepositoryUtil {
      * Helper method to fill the repository with example media records.
      * @return The list of media records that were added to the repository.
      */
-    public static List<MediaRecordEntity> fillRepositoryWithMediaRecords(MediaRecordRepository repository) {
-        List<MediaRecordEntity> expectedMediaRecords = List.of(
+    public static List<MediaRecordEntity> fillRepositoryWithMediaRecords(final MediaRecordRepository repository) {
+        final List<MediaRecordEntity> expectedMediaRecords = List.of(
                 MediaRecordEntity.builder()
                         .name("Example Record1")
+                        .courseIds(Collections.emptyList())
                         .creatorId(creator1Id)
                         .type(MediaRecordEntity.MediaType.DOCUMENT)
                         .contentIds(new ArrayList<>(List.of(UUID.randomUUID())))
                         .build(),
                 MediaRecordEntity.builder()
                         .name("Example Record2")
+                        .courseIds(Collections.emptyList())
                         .creatorId(creator2Id)
                         .type(MediaRecordEntity.MediaType.PRESENTATION)
                         .contentIds(new ArrayList<>(List.of(UUID.randomUUID(), UUID.randomUUID())))
