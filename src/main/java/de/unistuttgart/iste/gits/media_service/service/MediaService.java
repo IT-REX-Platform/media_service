@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
@@ -536,6 +537,25 @@ public class MediaService {
             }
 
         }
+    }
 
+    @Scheduled(cron = "${mediarecord.delete.cron}")
+    @SneakyThrows
+    private void deleteMediaRecordsWithoutAFile() {
+        log.info("Running cleanup of MediaRecords");
+        final List<MediaRecordEntity> records = repository.findAll();
+
+        for (final var entity : records) {
+            final Map<String, String> minioVariables = createMinIOVariables(entity);
+            final String bucketId = minioVariables.get(BUCKET_ID);
+            final String filename = minioVariables.get(FILENAME);
+
+            if (!doesObjectExist(filename, bucketId)) {
+                repository.delete(entity);
+            }
+            // publish changes
+            topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
+        }
+        log.info("Cleanup completed");
     }
 }
