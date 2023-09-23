@@ -539,6 +539,10 @@ public class MediaService {
         }
     }
 
+    /**
+     * Deletes MediaRecords without a file every night at 3 am.
+     */
+
     @Scheduled(cron = "${mediarecord.delete.cron}")
     @SneakyThrows
     private void deleteMediaRecordsWithoutAFile() {
