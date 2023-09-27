@@ -16,14 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-
 import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepositoryUtil.fillRepositoryWithMediaRecords;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@TablesToDelete({"media_record_content_ids", "media_record_course_ids", "media_record"})
+@TablesToDelete({"media_record_course_ids", "media_record_content_ids", "media_record"})
 @GraphQlApiTest
 @ActiveProfiles("test")
-class MutationLinkMediaRecordsWithContentTest {
+public class MutationAddCourseMediaRecordTest {
 
     @Autowired
     private MediaRecordRepository repository;
@@ -31,33 +30,34 @@ class MutationLinkMediaRecordsWithContentTest {
     @Test
     @Transactional
     @Commit
-    void testLinkMediaRecordsWithContent(final GraphQlTester tester) {
+    void testAddCourseToMediaRecords(final GraphQlTester tester) {
         List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
-        final UUID content1Id = UUID.randomUUID();
-        final UUID content2Id = UUID.randomUUID();
-        expectedMediaRecords.get(0).setContentIds(new ArrayList<>(List.of(content1Id, content2Id)));
-        expectedMediaRecords.get(1).setContentIds(new ArrayList<>(List.of(content1Id)));
+        final UUID course1Id = UUID.randomUUID();
+        final UUID course2Id = UUID.randomUUID();
+        expectedMediaRecords.get(0).setCourseIds(new ArrayList<>(List.of(course1Id, course2Id)));
+        expectedMediaRecords.get(1).setCourseIds(new ArrayList<>(List.of(course1Id)));
 
         expectedMediaRecords = repository.saveAll(expectedMediaRecords);
 
-        final String query = """
-                mutation($contentId: UUID!, $mediaRecordIds: [UUID!]!) {
-                    mediaRecords: setLinkedMediaRecordsForContent(contentId: $contentId, mediaRecordIds: $mediaRecordIds) {
-                        contentIds
+        String query = """
+                mutation($courseId: UUID!, $mediaRecordIds: [UUID!]!) {
+                    mediaRecords: setMediaRecordsForCourse(courseId: $courseId, mediaRecordIds: $mediaRecordIds) {
+                        courseIds
                     }
                 }
                 """;
 
         tester.document(query)
-                .variable("contentId", content2Id)
+                .variable("courseId", course2Id)
                 .variable("mediaRecordIds", List.of(expectedMediaRecords.get(1).getId()))
                 .execute()
                 .path("mediaRecords").entityList(MediaRecord.class).hasSize(1)
-                .path("mediaRecords[0].contentIds").entityList(UUID.class).hasSize(2).contains(content1Id, content2Id);
+                .path("mediaRecords[0].courseIds").entityList(UUID.class).hasSize(2).contains(course1Id, course2Id);
 
         final List<MediaRecordEntity> actualMediaRecords = repository.findAll();
         assertThat(actualMediaRecords).hasSize(2);
-        assertThat(actualMediaRecords.get(0).getContentIds()).contains(content1Id);
-        assertThat(actualMediaRecords.get(1).getContentIds()).contains(content1Id, content2Id);
+        assertThat(actualMediaRecords.get(0).getCourseIds()).contains(course1Id);
+        assertThat(actualMediaRecords.get(1).getCourseIds()).contains(course1Id, course2Id);
     }
+
 }

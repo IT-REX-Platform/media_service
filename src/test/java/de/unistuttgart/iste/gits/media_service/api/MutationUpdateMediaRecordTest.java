@@ -20,7 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
 
 @ContextConfiguration(classes = MockMinIoClientConfiguration.class)
-@TablesToDelete({"media_record_content_ids", "media_record"})
+@TablesToDelete({"media_record_content_ids","media_record_course_ids", "media_record"})
 @Transactional
 @GraphQlApiTest
 class MutationUpdateMediaRecordTest {
@@ -37,7 +37,7 @@ class MutationUpdateMediaRecordTest {
         final UUID newContentId = UUID.randomUUID();
         final String query = """
                 mutation {
-                    updateMediaRecord: _internal_updateMediaRecord(input: {
+                    updateMediaRecord: updateMediaRecord(input: {
                         id: "%s",
                         name: "Updated Record",
                         type: URL,
@@ -70,51 +70,4 @@ class MutationUpdateMediaRecordTest {
         assertThat(actualUpdatedRecord.getContentIds(), contains(newContentId));
     }
 
-    @Test
-    void testUpdateMediaRecordWithCourseIds(final GraphQlTester tester) {
-        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
-
-        expectedMediaRecords = repository.saveAll(expectedMediaRecords);
-
-        final UUID newContentId = UUID.randomUUID();
-        final String query = """
-                mutation {
-                    updateMediaRecord: _internal_updateMediaRecord(
-                            input: {
-                                id: "%s",
-                                name: "Updated Record",
-                                type: URL,
-                                contentIds: ["%s"]
-                            },
-                            courseIds: ["e8653f6f-9c14-4d84-8942-613ec651153a"]
-                    ) {
-                        id,
-                        courseIds,
-                        name,
-                        type,
-                        contentIds
-                    }
-                }
-                """.formatted(expectedMediaRecords.get(0).getId(), newContentId);
-
-        tester.document(query)
-                .execute()
-                .path("updateMediaRecord.id").entity(UUID.class).isEqualTo(expectedMediaRecords.get(0).getId())
-                .path("updateMediaRecord.courseIds").entityList(UUID.class).containsExactly(UUID.fromString("e8653f6f-9c14-4d84-8942-613ec651153a"))
-                .path("updateMediaRecord.name").entity(String.class).isEqualTo("Updated Record")
-                .path("updateMediaRecord.type").entity(MediaRecordEntity.MediaType.class).isEqualTo(MediaRecordEntity.MediaType.URL)
-                .path("updateMediaRecord.contentIds").entityList(UUID.class).hasSize(1).contains(newContentId);
-
-        assertThat(repository.count(), is((long)expectedMediaRecords.size()));
-        // check that the other record in the repository hasn't changed
-        final var actual = repository.findById(expectedMediaRecords.get(1).getId()).get();
-        assertThat(actual, is(expectedMediaRecords.get(1)));
-        // get the updated record and check that it has been updated
-        final MediaRecordEntity actualUpdatedRecord = repository.findById(expectedMediaRecords.get(0).getId()).get();
-
-        assertThat(actualUpdatedRecord.getName(), is("Updated Record"));
-        assertThat(actualUpdatedRecord.getType(), is(MediaRecordEntity.MediaType.URL));
-        assertThat(actualUpdatedRecord.getContentIds(), contains(newContentId));
-        assertThat(actualUpdatedRecord.getCourseIds(), is(List.of(UUID.fromString("e8653f6f-9c14-4d84-8942-613ec651153a"))));
-    }
 }

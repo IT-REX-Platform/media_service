@@ -18,14 +18,14 @@ public class MediaRecordRepositoryUtil {
         final List<MediaRecordEntity> expectedMediaRecords = List.of(
                 MediaRecordEntity.builder()
                         .name("Example Record1")
-                        .courseIds(Collections.emptyList())
+                        .courseIds(new ArrayList<>(List.of(UUID.randomUUID())))
                         .creatorId(creator1Id)
                         .type(MediaRecordEntity.MediaType.DOCUMENT)
                         .contentIds(new ArrayList<>(List.of(UUID.randomUUID())))
                         .build(),
                 MediaRecordEntity.builder()
                         .name("Example Record2")
-                        .courseIds(Collections.emptyList())
+                        .courseIds(new ArrayList<>(List.of(UUID.randomUUID(), UUID.randomUUID())))
                         .creatorId(creator2Id)
                         .type(MediaRecordEntity.MediaType.PRESENTATION)
                         .contentIds(new ArrayList<>(List.of(UUID.randomUUID(), UUID.randomUUID())))
