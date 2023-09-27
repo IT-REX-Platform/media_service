@@ -202,23 +202,34 @@ public class MediaService {
     }
 
     /**
-     * Links the media records with the passed ids to the content with the passed id.
+     * Sets the linked media records of a given content to the media records specified by the passed ids.
      *
-     * @param contentId      The content id to link the media records to.
+     * @param contentId      The content id of which the linked media records should be set.
      * @param mediaRecordIds The ids of the media records to link to the content.
      * @return Returns a list of the media records that were linked to the content.
      */
-    public List<MediaRecord> linkMediaRecordsWithContent(final UUID contentId, final List<UUID> mediaRecordIds) {
-        final List<MediaRecordEntity> entities = repository.findAllById(mediaRecordIds);
+    public List<MediaRecord> setLinkedMediaRecordsForContent(final UUID contentId, final List<UUID> mediaRecordIds) {
+        final List<MediaRecordEntity> mediaRecordsCurrentlyLinkedToContent
+                = repository.findMediaRecordEntitiesByContentIds(List.of(contentId));
 
-        checkForMissingMediaRecords(mediaRecordIds, entities);
+        // remove contentId from all media records that are currently linked to it
+        for (final MediaRecordEntity entity : mediaRecordsCurrentlyLinkedToContent) {
+            entity.getContentIds().remove(contentId);
+            repository.save(entity);
+        }
 
-        for (final MediaRecordEntity entity : entities) {
+        final List<MediaRecordEntity> mediaRecordsToBeLinkedToContent = repository.findAllById(mediaRecordIds);
+
+        checkForMissingMediaRecords(mediaRecordIds, mediaRecordsToBeLinkedToContent);
+
+        for (final MediaRecordEntity entity : mediaRecordsToBeLinkedToContent) {
             entity.getContentIds().add(contentId);
             repository.save(entity);
         }
 
-        return entities.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
+        return mediaRecordsToBeLinkedToContent.stream()
+                .map(x -> modelMapper.map(x, MediaRecord.class))
+                .toList();
     }
 
     /**
@@ -258,7 +269,7 @@ public class MediaService {
         entity.setCreatorId(creatorId);
 
         if (courseIds == null || courseIds.isEmpty()) {
-           entity.setCourseIds(Collections.emptyList());
+            entity.setCourseIds(Collections.emptyList());
         } else {
             entity.setCourseIds(courseIds);
         }
@@ -317,7 +328,10 @@ public class MediaService {
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record with its newly updated data.
      */
-    public MediaRecord updateMediaRecord(final List<UUID> courseIds, final UpdateMediaRecordInput input, final boolean generateUploadUrl, final boolean generateDownloadUrl) {
+    public MediaRecord updateMediaRecord(final List<UUID> courseIds,
+                                         final UpdateMediaRecordInput input,
+                                         final boolean generateUploadUrl,
+                                         final boolean generateDownloadUrl) {
         final MediaRecordEntity oldEntity = requireMediaRecordExisting(input.getId());
 
         // generate new entity based on updated data

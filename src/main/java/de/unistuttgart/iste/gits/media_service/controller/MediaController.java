@@ -51,7 +51,8 @@ public class MediaController {
     }
 
     @QueryMapping
-    public List<MediaRecord> userMediaRecords(@ContextValue final LoggedInUser currentUser, final DataFetchingEnvironment env) {
+    public List<MediaRecord> userMediaRecords(@ContextValue final LoggedInUser currentUser,
+                                              final DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsForUser(
                 currentUser.getId(),
                 uploadUrlInSelectionSet(env),
@@ -60,7 +61,8 @@ public class MediaController {
     }
 
     @QueryMapping
-    public List<List<MediaRecord>> mediaRecordsByContentIds(@Argument final List<UUID> contentIds, final DataFetchingEnvironment env) {
+    public List<List<MediaRecord>> mediaRecordsByContentIds(@Argument final List<UUID> contentIds,
+                                                            final DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsByContentIds(
                 contentIds,
                 uploadUrlInSelectionSet(env),
@@ -69,15 +71,16 @@ public class MediaController {
     }
 
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
-    public MediaRecordProgressData userProgressData(final MediaRecord mediaRecord, @ContextValue final LoggedInUser currentUser) {
+    public MediaRecordProgressData userProgressData(final MediaRecord mediaRecord,
+                                                    @ContextValue final LoggedInUser currentUser) {
         return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), currentUser.getId());
     }
 
-    @MutationMapping
-    public MediaRecord _internal_createMediaRecord(@Argument final List<UUID> courseIds,
-                                                   @Argument final CreateMediaRecordInput input,
-                                                   @ContextValue final LoggedInUser currentUser,
-                                                   final DataFetchingEnvironment env) {
+    @MutationMapping(name = "_internal_createMediaRecord")
+    public MediaRecord createMediaRecord(@Argument final List<UUID> courseIds,
+                                         @Argument final CreateMediaRecordInput input,
+                                         @ContextValue final LoggedInUser currentUser,
+                                         final DataFetchingEnvironment env) {
         return mediaService.createMediaRecord(
                 courseIds,
                 input,
@@ -92,8 +95,10 @@ public class MediaController {
         return mediaService.deleteMediaRecord(id);
     }
 
-    @MutationMapping
-    public MediaRecord updateMediaRecord(@Argument final List<UUID> courseIds, @Argument final UpdateMediaRecordInput input, final DataFetchingEnvironment env) {
+    @MutationMapping(name = "_internal_updateMediaRecord")
+    public MediaRecord updateMediaRecord(@Argument final List<UUID> courseIds,
+                                         @Argument final UpdateMediaRecordInput input,
+                                         final DataFetchingEnvironment env) {
         return mediaService.updateMediaRecord(
                 courseIds,
                 input,
@@ -103,13 +108,15 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord logMediaRecordWorkedOn(@Argument final UUID mediaRecordId, @ContextValue final LoggedInUser currentUser) {
+    public MediaRecord logMediaRecordWorkedOn(@Argument final UUID mediaRecordId,
+                                              @ContextValue final LoggedInUser currentUser) {
         return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, currentUser.getId());
     }
 
-    @MutationMapping
-    public List<MediaRecord> linkMediaRecordsWithContent(@Argument final UUID contentId, @Argument final List<UUID> mediaRecordIds) {
-        return mediaService.linkMediaRecordsWithContent(contentId, mediaRecordIds);
+    @MutationMapping(name = "_internal_setLinkedMediaRecordsForContent")
+    public List<MediaRecord> setLinkedMediaRecordsForContent(@Argument final UUID contentId,
+                                                         @Argument final List<UUID> mediaRecordIds) {
+        return mediaService.setLinkedMediaRecordsForContent(contentId, mediaRecordIds);
     }
 
     /**

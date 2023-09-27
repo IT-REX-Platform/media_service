@@ -37,7 +37,7 @@ class MutationUpdateMediaRecordTest {
         final UUID newContentId = UUID.randomUUID();
         final String query = """
                 mutation {
-                    updateMediaRecord(input: {
+                    updateMediaRecord: _internal_updateMediaRecord(input: {
                         id: "%s",
                         name: "Updated Record",
                         type: URL,
@@ -79,13 +79,14 @@ class MutationUpdateMediaRecordTest {
         final UUID newContentId = UUID.randomUUID();
         final String query = """
                 mutation {
-                        updateMediaRecord(input: {
-                        id: "%s",
-                        name: "Updated Record",
-                        type: URL,
-                        contentIds: ["%s"]
-                    }
-                    courseIds: ["e8653f6f-9c14-4d84-8942-613ec651153a"]
+                    updateMediaRecord: _internal_updateMediaRecord(
+                            input: {
+                                id: "%s",
+                                name: "Updated Record",
+                                type: URL,
+                                contentIds: ["%s"]
+                            },
+                            courseIds: ["e8653f6f-9c14-4d84-8942-613ec651153a"]
                     ) {
                         id,
                         courseIds,
