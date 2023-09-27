@@ -70,13 +70,22 @@ public class MediaController {
         );
     }
 
+    @QueryMapping
+    public List<List<MediaRecord>> mediaRecordsForCourses(@Argument final List<UUID> courseIds, final DataFetchingEnvironment env) {
+        return mediaService.getMediaRecordsForCourses(
+                courseIds,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
+    }
+
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
     public MediaRecordProgressData userProgressData(final MediaRecord mediaRecord,
                                                     @ContextValue final LoggedInUser currentUser) {
         return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), currentUser.getId());
     }
 
-    @MutationMapping(name = "_internal_createMediaRecord")
+    @MutationMapping
     public MediaRecord createMediaRecord(@Argument final List<UUID> courseIds,
                                          @Argument final CreateMediaRecordInput input,
                                          @ContextValue final LoggedInUser currentUser,
@@ -95,7 +104,7 @@ public class MediaController {
         return mediaService.deleteMediaRecord(id);
     }
 
-    @MutationMapping(name = "_internal_updateMediaRecord")
+    @MutationMapping
     public MediaRecord updateMediaRecord(@Argument final List<UUID> courseIds,
                                          @Argument final UpdateMediaRecordInput input,
                                          final DataFetchingEnvironment env) {
@@ -113,7 +122,7 @@ public class MediaController {
         return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, currentUser.getId());
     }
 
-    @MutationMapping(name = "_internal_setLinkedMediaRecordsForContent")
+    @MutationMapping
     public List<MediaRecord> setLinkedMediaRecordsForContent(@Argument final UUID contentId,
                                                          @Argument final List<UUID> mediaRecordIds) {
         return mediaService.setLinkedMediaRecordsForContent(contentId, mediaRecordIds);
@@ -136,5 +145,17 @@ public class MediaController {
      */
     private boolean uploadUrlInSelectionSet(final DataFetchingEnvironment env) {
         return env.getSelectionSet().contains("uploadUrl");
+    }
+
+    /**
+     * Add the Course to the selected mediaRecords
+     *
+     * @param courseId of the course
+     * @param mediaRecordIds of the mediaRecords to be changed
+     * @return the updated mediaRecords
+     */
+    @MutationMapping
+    public List<MediaRecord> setMediaRecordsForCourse(@Argument final UUID courseId, @Argument final List<UUID> mediaRecordIds) {
+        return mediaService.setMediaRecordsForCourse(courseId, mediaRecordIds);
     }
 }

@@ -3,11 +3,16 @@ package de.unistuttgart.iste.gits.media_service.service;
 import de.unistuttgart.iste.gits.common.event.ContentChangeEvent;
 import de.unistuttgart.iste.gits.common.event.CrudOperation;
 import de.unistuttgart.iste.gits.common.exception.IncompleteEventMessageException;
-import de.unistuttgart.iste.gits.generated.dto.*;
+import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
+import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
+import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
-import io.minio.*;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.MinioClient;
+import io.minio.RemoveObjectArgs;
+import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import jakarta.persistence.EntityNotFoundException;
@@ -17,7 +22,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
-import java.time.*;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -190,6 +197,39 @@ public class MediaService {
     }
 
     /**
+     * Gets all media records that are associated with the passed course id.
+     *
+     * @param courseIds The course id to get the media records for.
+     * @return Returns a list of media records that are associated with the course id.
+     */
+    public List<List<MediaRecord>> getMediaRecordsForCourses(final List<UUID> courseIds, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByCourseIds(courseIds);
+
+        // create our resulting list
+        final List<List<MediaRecord>> result = new ArrayList<>(courseIds.size());
+
+        // fill it with empty lists for each content id so that we can later fill them with
+        // the media records associated with that content id
+        for (int i = 0; i < courseIds.size(); i++) {
+            result.add(new ArrayList<>());
+        }
+
+        // loop over all the entities we got and put them in their respective lists
+        for (final MediaRecordEntity entity : records) {
+            for (int i = 0; i < courseIds.size(); i++) {
+                final UUID courseId = courseIds.get(i);
+                if (entity.getCourseIds().contains(courseId)) {
+                    result.get(i).add(mapEntityToMediaRecord(entity));
+                }
+            }
+        }
+
+        result.forEach(x -> fillMediaRecordsUrlsIfRequested(x, generateUploadUrls, generateDownloadUrls));
+
+        return result;
+    }
+
+    /**
      * Finds a media record with the specified id or throws an EntityNotFoundException if no such media record exists.
      *
      * @param id The id of the media record to find.
@@ -228,6 +268,37 @@ public class MediaService {
         }
 
         return mediaRecordsToBeLinkedToContent.stream()
+                .map(x -> modelMapper.map(x, MediaRecord.class))
+                .toList();
+    }
+
+    /**
+     * Sets the course of the selected mediaRecords.
+     *
+     * @param courseId      The course id of which the media records should be added to.
+     * @param mediaRecordIds The ids of the media records to be added to the course.
+     * @return Returns a list of the media records that were added to the course.
+     */
+    public List<MediaRecord> setMediaRecordsForCourse(final UUID courseId, final List<UUID> mediaRecordIds) {
+        final List<MediaRecordEntity> currentMediaRecords
+                = repository.findAllById(mediaRecordIds);
+
+        // remove courseId from all media records which currently contain it
+        for (final MediaRecordEntity entity : currentMediaRecords) {
+            entity.getCourseIds().remove(courseId);
+            repository.save(entity);
+        }
+
+        final List<MediaRecordEntity> mediaRecordsToAddCourse = repository.findAllById(mediaRecordIds);
+
+        checkForMissingMediaRecords(mediaRecordIds, mediaRecordsToAddCourse);
+
+        for (final MediaRecordEntity entity : mediaRecordsToAddCourse) {
+            entity.getCourseIds().add(courseId);
+            repository.save(entity);
+        }
+
+        return mediaRecordsToAddCourse.stream()
                 .map(x -> modelMapper.map(x, MediaRecord.class))
                 .toList();
     }
@@ -565,4 +636,5 @@ public class MediaService {
         }
 
     }
+
 }

@@ -17,4 +17,7 @@ public interface MediaRecordRepository extends JpaRepository<MediaRecordEntity, 
     List<MediaRecordEntity> findMediaRecordEntitiesByContentIds(@Param("contentIds") List<UUID> contentIds);
 
     List<MediaRecordEntity> findMediaRecordEntitiesByCreatorId(UUID creatorId);
+
+    @Query("SELECT DISTINCT media FROM MediaRecord media JOIN media.courseIds actualIds WHERE actualIds IN :courseIds")
+    List<MediaRecordEntity> findMediaRecordEntitiesByCourseIds(@Param("courseIds") List<UUID> courseIds);
 }

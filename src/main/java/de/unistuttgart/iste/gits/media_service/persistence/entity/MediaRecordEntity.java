@@ -37,7 +37,7 @@ public class MediaRecordEntity {
     @Column(length = 500)
     private String downloadUrl;
 
-    @Column(columnDefinition = "UUID[]", nullable = false)
+    @ElementCollection
     private List<UUID> courseIds;
 
     @OneToMany(mappedBy = "primaryKey.mediaRecordId", cascade = CascadeType.ALL, orphanRemoval = true)

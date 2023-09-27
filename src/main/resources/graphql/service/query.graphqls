@@ -22,4 +22,9 @@ type Query {
     the media records associated with the content ID at the same index in the input list
     """
     mediaRecordsByContentIds(contentIds: [UUID!]!): [[MediaRecord!]!]!
+
+    """
+    Returns all media records for the given CourseIds
+    """
+    mediaRecordsForCourses(courseIds: [UUID!]!): [[MediaRecord!]!]!
 }
