@@ -1,9 +1,7 @@
-package de.unistuttgart.iste.gits.media_service.persistence.dao;
+package de.unistuttgart.iste.gits.media_service.persistence.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import org.hibernate.validator.constraints.Length;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,14 +19,13 @@ public class MediaRecordEntity {
     private UUID id;
 
     @Column(nullable = false)
-    @NotNull(message = "Name must not be null")
-    @Length(min = 1, max = 255, message = "Name must be between 1 and 255 characters")
     private String name;
 
-    @NotNull(message = "Creator ID must not be null")
+    @Column(nullable = false)
     private UUID creatorId;
 
     @Enumerated(EnumType.ORDINAL)
+    @Column(nullable = false)
     private MediaType type;
 
     @ElementCollection
@@ -40,7 +37,8 @@ public class MediaRecordEntity {
     @Column(length = 500)
     private String downloadUrl;
 
-
+    @ElementCollection
+    private List<UUID> courseIds;
 
     @OneToMany(mappedBy = "primaryKey.mediaRecordId", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

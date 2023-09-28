@@ -2,11 +2,12 @@ package de.unistuttgart.iste.gits.media_service.service;
 
 import de.unistuttgart.iste.gits.common.event.ContentChangeEvent;
 import de.unistuttgart.iste.gits.common.event.CrudOperation;
+import de.unistuttgart.iste.gits.common.exception.IncompleteEventMessageException;
 import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
@@ -19,9 +20,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.*;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +44,7 @@ public class MediaService {
     public static final String BUCKET_ID = "bucketId";
     public static final String FILENAME = "filename";
     public static final String MEDIA_RECORDS_NOT_FOUND = "Media record(s) with id(s) %s not found.";
+
     private final MinioClient minioInternalClient;
     private final MinioClient minioExternalClient;
 
@@ -64,8 +69,8 @@ public class MediaService {
      * @param generateDownloadUrls If temporary download urls should be generated for the media records
      * @return Returns a list containing all saved media records.
      */
-    public List<MediaRecord> getAllMediaRecords(boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecord> records = repository.findAll().stream()
+    public List<MediaRecord> getAllMediaRecords(final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecord> records = repository.findAll().stream()
                 .map(this::mapEntityToMediaRecord)
                 .toList();
 
@@ -83,19 +88,10 @@ public class MediaService {
      * @throws EntityNotFoundException Thrown when one or more passed ids do not have corresponding media records in
      *                                 the database.
      */
-    public List<MediaRecord> getMediaRecordsByIds(List<UUID> ids, boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
+    public List<MediaRecord> getMediaRecordsByIds(final List<UUID> ids, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
 
-        // if there are fewer returned records than passed ids, that means that some ids could not be found in the
-        // db. In that case, calculate the difference of the two lists and throw an exception listing which ids
-        // could not be found
-        if (records.size() != ids.size()) {
-            List<UUID> missingIds = new ArrayList<>(ids);
-            missingIds.removeAll(records.stream().map(MediaRecordEntity::getId).toList());
-
-            throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND
-                    .formatted(missingIds.stream().map(UUID::toString).collect(Collectors.joining(", "))));
-        }
+        checkForMissingMediaRecords(ids, records);
 
         return fillMediaRecordsUrlsIfRequested(
                 records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
@@ -109,17 +105,17 @@ public class MediaService {
      * if an entity cannot be found. Instead, it returns NULL for that entity.
      *
      * @return Returns a List containing the MediaRecords with the specified ids. If a media record for an id cannot
-     *         be found, returns NULL for that media record instead.
+     * be found, returns NULL for that media record instead.
      */
-    public List<MediaRecord> findMediaRecordsByIds(List<UUID> ids, boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
+    public List<MediaRecord> findMediaRecordsByIds(final List<UUID> ids, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = repository.findAllById(ids).stream().toList();
 
-        List<MediaRecord> result = new ArrayList<>(ids.size());
+        final List<MediaRecord> result = new ArrayList<>(ids.size());
 
         // go over all requested ids
-        for (UUID id : ids) {
+        for (final UUID id : ids) {
             // get the entity with the matching id or NULL if it doesn't exist
-            MediaRecordEntity entity = records.stream().filter(x -> x.getId().equals(id)).findAny().orElse(null);
+            final MediaRecordEntity entity = records.stream().filter(x -> x.getId().equals(id)).findAny().orElse(null);
             MediaRecord mediaRecord = null;
             // if we found an entity, convert it to a DTO
             if (entity != null) {
@@ -135,9 +131,8 @@ public class MediaService {
         );
     }
 
-    public MediaRecord getMediaRecordById(UUID id) {
-        requireMediaRecordExisting(id);
-        return mapEntityToMediaRecord(repository.getReferenceById(id));
+    public MediaRecord getMediaRecordById(final UUID id) {
+        return mapEntityToMediaRecord(requireMediaRecordExisting(id));
     }
 
     /**
@@ -146,8 +141,8 @@ public class MediaService {
      * @param userId The id of the user to get the media records for.
      * @return Returns a list of the user's media records.
      */
-    public List<MediaRecord> getMediaRecordsForUser(UUID userId, boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByCreatorId(userId);
+    public List<MediaRecord> getMediaRecordsForUser(final UUID userId, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByCreatorId(userId);
 
         return fillMediaRecordsUrlsIfRequested(
                 records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
@@ -165,11 +160,11 @@ public class MediaService {
      * @return Returns a list of lists, where each sublist stores the media records that are associated with the content
      * id at the same index in the passed list.
      */
-    public List<List<MediaRecord>> getMediaRecordsByContentIds(List<UUID> contentIds, boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByContentIds(contentIds);
+    public List<List<MediaRecord>> getMediaRecordsByContentIds(final List<UUID> contentIds, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByContentIds(contentIds);
 
         // create our resulting list
-        List<List<MediaRecord>> result = new ArrayList<>(contentIds.size());
+        final List<List<MediaRecord>> result = new ArrayList<>(contentIds.size());
 
         // fill it with empty lists for each content id so that we can later fill them with
         // the media records associated with that content id
@@ -178,9 +173,9 @@ public class MediaService {
         }
 
         // loop over all the entities we got and put them in their respective lists
-        for (MediaRecordEntity entity : records) {
+        for (final MediaRecordEntity entity : records) {
             for (int i = 0; i < contentIds.size(); i++) {
-                UUID contentId = contentIds.get(i);
+                final UUID contentId = contentIds.get(i);
                 if (entity.getContentIds().contains(contentId)) {
                     result.get(i).add(mapEntityToMediaRecord(entity));
                 }
@@ -189,47 +184,143 @@ public class MediaService {
 
         result.forEach(x -> fillMediaRecordsUrlsIfRequested(x, generateUploadUrls, generateDownloadUrls));
 
+        return result;
+    }
+
+    /**
+     * Gets all media records that are associated with the passed content id.
+     *
+     * @param contentId The content id to get the media records for.
+     * @return Returns a list of media records that are associated with the content id.
+     */
+    public List<MediaRecordEntity> getMediaRecordEntitiesByContentId(final UUID contentId) {
+        return repository.findMediaRecordEntitiesByContentIds(List.of(contentId));
+    }
+
+    /**
+     * Gets all media records that are associated with the passed course id.
+     *
+     * @param courseIds The course id to get the media records for.
+     * @return Returns a list of media records that are associated with the course id.
+     */
+    public List<List<MediaRecord>> getMediaRecordsForCourses(final List<UUID> courseIds, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = repository.findMediaRecordEntitiesByCourseIds(courseIds);
+
+        // create our resulting list
+        final List<List<MediaRecord>> result = new ArrayList<>(courseIds.size());
+
+        // fill it with empty lists for each content id so that we can later fill them with
+        // the media records associated with that content id
+        for (int i = 0; i < courseIds.size(); i++) {
+            result.add(new ArrayList<>());
+        }
+
+        // loop over all the entities we got and put them in their respective lists
+        for (final MediaRecordEntity entity : records) {
+            for (int i = 0; i < courseIds.size(); i++) {
+                final UUID courseId = courseIds.get(i);
+                if (entity.getCourseIds().contains(courseId)) {
+                    result.get(i).add(mapEntityToMediaRecord(entity));
+                }
+            }
+        }
+
+        result.forEach(x -> fillMediaRecordsUrlsIfRequested(x, generateUploadUrls, generateDownloadUrls));
 
         return result;
     }
 
-    public List<MediaRecordEntity> getMediaRecordEntitiesByContentId(UUID contentId) {
-        return repository.findMediaRecordEntitiesByContentIds(List.of(contentId));
-    }
-
-    public void requireMediaRecordExisting(UUID id) {
-        if (!repository.existsById(id)) {
-            throw new EntityNotFoundException("Media record with id " + id + " not found.");
-        }
+    /**
+     * Finds a media record with the specified id or throws an EntityNotFoundException if no such media record exists.
+     *
+     * @param id The id of the media record to find.
+     * @return Returns the media record with the specified id.
+     * @throws EntityNotFoundException Thrown when no media record with the specified id exists.
+     */
+    public MediaRecordEntity requireMediaRecordExisting(final UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Media record with id " + id + " not found."));
     }
 
     /**
-     * Links the media records with the passed ids to the content with the passed id.
+     * Sets the linked media records of a given content to the media records specified by the passed ids.
      *
-     * @param contentId      The content id to link the media records to.
+     * @param contentId      The content id of which the linked media records should be set.
      * @param mediaRecordIds The ids of the media records to link to the content.
      * @return Returns a list of the media records that were linked to the content.
      */
-    public List<MediaRecord> linkMediaRecordsWithContent(UUID contentId, List<UUID> mediaRecordIds) {
-        List<MediaRecordEntity> entities = repository.findAllById(mediaRecordIds);
+    public List<MediaRecord> setLinkedMediaRecordsForContent(final UUID contentId, final List<UUID> mediaRecordIds) {
+        final List<MediaRecordEntity> mediaRecordsCurrentlyLinkedToContent
+                = repository.findMediaRecordEntitiesByContentIds(List.of(contentId));
 
-        // if there are fewer returned records than passed ids, that means that some ids could not be found in the
-        // db. In that case, calculate the difference of the two lists and throw an exception listing which ids
-        // could not be found
+        // remove contentId from all media records that are currently linked to it
+        for (final MediaRecordEntity entity : mediaRecordsCurrentlyLinkedToContent) {
+            entity.getContentIds().remove(contentId);
+            repository.save(entity);
+        }
+
+        final List<MediaRecordEntity> mediaRecordsToBeLinkedToContent = repository.findAllById(mediaRecordIds);
+
+        checkForMissingMediaRecords(mediaRecordIds, mediaRecordsToBeLinkedToContent);
+
+        for (final MediaRecordEntity entity : mediaRecordsToBeLinkedToContent) {
+            entity.getContentIds().add(contentId);
+            repository.save(entity);
+        }
+
+        return mediaRecordsToBeLinkedToContent.stream()
+                .map(x -> modelMapper.map(x, MediaRecord.class))
+                .toList();
+    }
+
+    /**
+     * Sets the course of the selected mediaRecords.
+     *
+     * @param courseId      The course id of which the media records should be added to.
+     * @param mediaRecordIds The ids of the media records to be added to the course.
+     * @return Returns a list of the media records that were added to the course.
+     */
+    public List<MediaRecord> setMediaRecordsForCourse(final UUID courseId, final List<UUID> mediaRecordIds) {
+        final List<MediaRecordEntity> currentMediaRecords
+                = repository.findAllById(mediaRecordIds);
+
+        // remove courseId from all media records which currently contain it
+        for (final MediaRecordEntity entity : currentMediaRecords) {
+            entity.getCourseIds().remove(courseId);
+            repository.save(entity);
+        }
+
+        final List<MediaRecordEntity> mediaRecordsToAddCourse = repository.findAllById(mediaRecordIds);
+
+        checkForMissingMediaRecords(mediaRecordIds, mediaRecordsToAddCourse);
+
+        for (final MediaRecordEntity entity : mediaRecordsToAddCourse) {
+            entity.getCourseIds().add(courseId);
+            repository.save(entity);
+        }
+
+        return mediaRecordsToAddCourse.stream()
+                .map(x -> modelMapper.map(x, MediaRecord.class))
+                .toList();
+    }
+
+    /**
+     * if there are fewer returned records than passed ids, that means that some ids could not be found in the
+     * db. In that case, calculate the difference of the two lists and throw an exception listing which ids
+     * could not be found
+     *
+     * @param mediaRecordIds ids that should be checked
+     * @param entities       entities that were found
+     * @throws EntityNotFoundException if there are fewer returned records than passed ids
+     */
+    private void checkForMissingMediaRecords(final List<UUID> mediaRecordIds, final List<MediaRecordEntity> entities) {
         if (entities.size() != mediaRecordIds.size()) {
-            List<UUID> missingIds = new ArrayList<>(mediaRecordIds);
+            final List<UUID> missingIds = new ArrayList<>(mediaRecordIds);
             missingIds.removeAll(entities.stream().map(MediaRecordEntity::getId).toList());
 
             throw new EntityNotFoundException(MEDIA_RECORDS_NOT_FOUND
                     .formatted(missingIds.stream().map(UUID::toString).collect(Collectors.joining(", "))));
         }
-
-        for (MediaRecordEntity entity : entities) {
-            entity.getContentIds().add(contentId);
-            repository.save(entity);
-        }
-
-        return entities.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList();
     }
 
     /**
@@ -241,13 +332,20 @@ public class MediaService {
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record which was created, with the ID generated for it.
      */
-    public MediaRecord createMediaRecord(CreateMediaRecordInput input,
-                                         UUID creatorId,
-                                         boolean generateUploadUrl,
-                                         boolean generateDownloadUrl) {
-        MediaRecordEntity entity = modelMapper.map(input, MediaRecordEntity.class);
+    public MediaRecord createMediaRecord(final List<UUID> courseIds, final CreateMediaRecordInput input,
+                                         final UUID creatorId,
+                                         final boolean generateUploadUrl,
+                                         final boolean generateDownloadUrl) {
+        final MediaRecordEntity entity = modelMapper.map(input, MediaRecordEntity.class);
 
         entity.setCreatorId(creatorId);
+
+        if (courseIds == null || courseIds.isEmpty()) {
+            entity.setCourseIds(Collections.emptyList());
+        } else {
+            entity.setCourseIds(courseIds);
+        }
+
 
         repository.save(entity);
 
@@ -270,17 +368,16 @@ public class MediaService {
      * @throws EntityNotFoundException Thrown when no record matching the passed id could be found.
      */
     @SneakyThrows
-    public UUID deleteMediaRecord(UUID id) {
+    public UUID deleteMediaRecord(final UUID id) {
         requireMediaRecordExisting(id);
-        MediaRecordEntity entity = repository.getReferenceById(id);
-        Map<String, String> minioVariables = createMinIOVariables(entity);
-        String bucketId = minioVariables.get(BUCKET_ID);
-        String filename = minioVariables.get(FILENAME);
+        final MediaRecordEntity entity = repository.getReferenceById(id);
+        final Map<String, String> minioVariables = createMinIOVariables(entity);
+        final String bucketId = minioVariables.get(BUCKET_ID);
+        final String filename = minioVariables.get(FILENAME);
 
         repository.delete(entity);
 
-
-        if (isObjectExist(filename, bucketId)) {
+        if (doesObjectExist(filename, bucketId)) {
             minioInternalClient.removeObject(
                     RemoveObjectArgs
                             .builder()
@@ -289,7 +386,7 @@ public class MediaService {
                             .build());
         }
 
-        //publish changes
+        // publish changes
         topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
         return id;
     }
@@ -303,19 +400,26 @@ public class MediaService {
      * @param generateDownloadUrl If a temporary download url should be generated for the media record
      * @return Returns the media record with its newly updated data.
      */
-    public MediaRecord updateMediaRecord(UpdateMediaRecordInput input, boolean generateUploadUrl, boolean generateDownloadUrl) {
-        requireMediaRecordExisting(input.getId());
-
-        MediaRecordEntity oldEntity = repository.getReferenceById(input.getId());
+    public MediaRecord updateMediaRecord(final List<UUID> courseIds,
+                                         final UpdateMediaRecordInput input,
+                                         final boolean generateUploadUrl,
+                                         final boolean generateDownloadUrl) {
+        final MediaRecordEntity oldEntity = requireMediaRecordExisting(input.getId());
 
         // generate new entity based on updated data
-        MediaRecordEntity newEntity = modelMapper.map(input, MediaRecordEntity.class);
+        final MediaRecordEntity newEntity = modelMapper.map(input, MediaRecordEntity.class);
 
         // keep creator id from old entity
         newEntity.setCreatorId(oldEntity.getCreatorId());
+        // update with current courseIds
+        if (courseIds == null || courseIds.isEmpty()) {
+            newEntity.setCourseIds(Collections.emptyList());
+        } else {
+            newEntity.setCourseIds(courseIds);
+        }
 
         // save updated entity
-        MediaRecordEntity entity = repository.save(newEntity);
+        final MediaRecordEntity entity = repository.save(newEntity);
 
         //publish changes
         topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
@@ -327,7 +431,7 @@ public class MediaService {
         );
     }
 
-    public MediaRecord mapEntityToMediaRecord(MediaRecordEntity entity) {
+    private MediaRecord mapEntityToMediaRecord(final MediaRecordEntity entity) {
         return modelMapper.map(entity, MediaRecord.class);
     }
 
@@ -338,10 +442,10 @@ public class MediaService {
      * @param mediaRecords The list of media records to fill the urls for.
      * @return Returns the same list (which has been modified in-place) with the media records with the now added urls.
      */
-    private List<MediaRecord> fillMediaRecordsUrlsIfRequested(List<MediaRecord> mediaRecords, boolean generateUploadUrls, boolean generateDownloadUrls) {
-        List<MediaRecord> records = new ArrayList<>();
+    private List<MediaRecord> fillMediaRecordsUrlsIfRequested(final List<MediaRecord> mediaRecords, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecord> records = new ArrayList<>();
 
-        for (MediaRecord mediaRecord : mediaRecords) {
+        for (final MediaRecord mediaRecord : mediaRecords) {
             records.add(fillMediaRecordUrlsIfRequested(mediaRecord, generateUploadUrls, generateDownloadUrls));
         }
 
@@ -352,15 +456,15 @@ public class MediaService {
      * Helper method which adds a generated upload and/or download url to the passed media record and returns that same
      * media record.
      *
-     * @param mediaRecord        The media record to add the urls to.
+     * @param mediaRecord         The media record to add the urls to.
      * @param generateUploadUrl   If an upload url should be generated.
      * @param generateDownloadUrl If a download url should be generated
      * @return Returns the same media record that has been passed to the method.
      */
-    private MediaRecord fillMediaRecordUrlsIfRequested(MediaRecord mediaRecord, boolean generateUploadUrl, boolean generateDownloadUrl) {
+    private MediaRecord fillMediaRecordUrlsIfRequested(final MediaRecord mediaRecord, final boolean generateUploadUrl, final boolean generateDownloadUrl) {
 
         if (generateUploadUrl) {
-            String uploadUrl = mediaRecord.getUploadUrl();
+            final String uploadUrl = mediaRecord.getUploadUrl();
             if (uploadUrl == null || isExpired(uploadUrl)) {
                 mediaRecord.setUploadUrl(createUploadUrl(mediaRecord));
             }
@@ -368,7 +472,7 @@ public class MediaService {
         }
 
         if (generateDownloadUrl) {
-            String downloadUrl = mediaRecord.getDownloadUrl();
+            final String downloadUrl = mediaRecord.getDownloadUrl();
             if (downloadUrl == null || isExpired(downloadUrl)) {
                 mediaRecord.setDownloadUrl(createDownloadUrl(mediaRecord));
             }
@@ -379,15 +483,17 @@ public class MediaService {
 
     /**
      * Checks if the download and upload url are expired and need to be recreated.
+     *
      * @param url that should be checked
      * @return true if the url is expired, false otherwise
      */
-    private boolean isExpired(String url) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss").withZone(ZoneOffset.UTC);
-        Pattern datePattern = Pattern.compile("X-Amz-Date=([0-9]*T[0-9]*)");
-        Matcher dateMatcher = datePattern.matcher(url);
-        Pattern expiryPattern = Pattern.compile("X-Amz-Expires=([0-9]*)");
-        Matcher expiryMatcher = expiryPattern.matcher(url);
+    @SuppressWarnings("java:S6353") // explicit regex is more readable
+    private boolean isExpired(final String url) {
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss").withZone(ZoneOffset.UTC);
+        final Pattern datePattern = Pattern.compile("X-Amz-Date=([0-9]*T[0-9]*)");
+        final Matcher dateMatcher = datePattern.matcher(url);
+        final Pattern expiryPattern = Pattern.compile("X-Amz-Expires=([0-9]*)");
+        final Matcher expiryMatcher = expiryPattern.matcher(url);
 
         String dateString = "";
         while (dateMatcher.find()) {
@@ -399,10 +505,10 @@ public class MediaService {
             expiryString = Long.parseLong(expiryMatcher.group(1));
         }
 
-        ZonedDateTime date = ZonedDateTime.parse(dateString, formatter);
-        long expiry = expiryString;
+        final ZonedDateTime date = ZonedDateTime.parse(dateString, formatter);
+        final long expiry = expiryString;
 
-        ZonedDateTime expiration = date.plusSeconds(expiry-300);
+        final ZonedDateTime expiration = date.plusSeconds(expiry - 300);
 
         return expiration.toInstant().isBefore((Instant.now()));
 
@@ -415,16 +521,13 @@ public class MediaService {
      * @return Returns the created uploadURL.
      */
     @SneakyThrows
-    private String createUploadUrl(MediaRecord mediaRecord) {
+    private String createUploadUrl(final MediaRecord mediaRecord) {
+        final MediaRecordEntity entity = requireMediaRecordExisting(mediaRecord.getId());
+        final Map<String, String> variables = createMinIOVariables(entity);
+        final String bucketId = variables.get(BUCKET_ID);
+        final String filename = variables.get(FILENAME);
 
-        requireMediaRecordExisting(mediaRecord.getId());
-
-        MediaRecordEntity entity = repository.getReferenceById(mediaRecord.getId());
-        Map<String, String> variables = createMinIOVariables(entity);
-        String bucketId = variables.get(BUCKET_ID);
-        String filename = variables.get(FILENAME);
-
-        String uploadUrl = minioExternalClient.getPresignedObjectUrl(
+        final String uploadUrl = minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs
                         .builder()
                         .method(Method.PUT)
@@ -444,15 +547,15 @@ public class MediaService {
      * @return Returns the created downloadURL.
      */
     @SneakyThrows
-    private String createDownloadUrl(MediaRecord mediaRecord) {
+    private String createDownloadUrl(final MediaRecord mediaRecord) {
         requireMediaRecordExisting(mediaRecord.getId());
 
-        MediaRecordEntity entity = repository.getReferenceById(mediaRecord.getId());
-        Map<String, String> variables = createMinIOVariables(entity);
-        String bucketId = variables.get(BUCKET_ID);
-        String filename = variables.get(FILENAME);
+        final MediaRecordEntity entity = repository.getReferenceById(mediaRecord.getId());
+        final Map<String, String> variables = createMinIOVariables(entity);
+        final String bucketId = variables.get(BUCKET_ID);
+        final String filename = variables.get(FILENAME);
 
-        String downloadUrl =  minioExternalClient.getPresignedObjectUrl(
+        final String downloadUrl = minioExternalClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
                         .bucket(bucketId)
@@ -470,30 +573,30 @@ public class MediaService {
      * @param mediaRecord UUID of the media record
      * @return a map with the bucketID and filename which should be used by MinIO
      */
-    private Map<String, String> createMinIOVariables(MediaRecordEntity mediaRecord) {
-        Map<String, String> variables = new HashMap<>();
+    private Map<String, String> createMinIOVariables(final MediaRecordEntity mediaRecord) {
+        final Map<String, String> variables = new HashMap<>();
 
-        String filename = mediaRecord.getId().toString();
+        final String filename = mediaRecord.getId().toString();
         variables.put(FILENAME, filename);
-        String bucketId = mediaRecord.getType().toString().toLowerCase();
+        final String bucketId = mediaRecord.getType().toString().toLowerCase();
         variables.put(BUCKET_ID, bucketId);
 
         return variables;
     }
 
-    public boolean isObjectExist(String name, String bucketname) {
+    private boolean doesObjectExist(final String name, final String bucketName) {
         try {
 
             minioInternalClient.statObject(StatObjectArgs.builder()
-                    .bucket(bucketname)
+                    .bucket(bucketName)
                     .object(name).build());
             return true;
-        } catch (ErrorResponseException e) {
-            e.printStackTrace();
+        } catch (final ErrorResponseException e) {
+            log.error("Object not found", e);
             return false;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+        } catch (final Exception e) {
+            log.error("Error while checking if object exists", e);
+            return false;
         }
     }
 
@@ -504,11 +607,11 @@ public class MediaService {
      *
      * @param dto Event object containing a list of content IDs and a CRUD operation
      */
-    public void removeContentIds(ContentChangeEvent dto) {
+    public void removeContentIds(final ContentChangeEvent dto) throws IncompleteEventMessageException {
 
         // check if DTO is complete
         if (dto.getContentIds() == null || dto.getOperation() == null) {
-            throw new NullPointerException("incomplete message received: all fields of a message must be non-null");
+            throw new IncompleteEventMessageException(IncompleteEventMessageException.ERROR_INCOMPLETE_MESSAGE);
         }
 
         //This method should only process Content Deletion Events
@@ -517,13 +620,13 @@ public class MediaService {
         }
 
 
-        List<MediaRecordEntity> entities = repository.findMediaRecordEntitiesByContentIds(dto.getContentIds());
+        final List<MediaRecordEntity> entities = repository.findMediaRecordEntitiesByContentIds(dto.getContentIds());
 
         // apply changes to all found media records
-        for (MediaRecordEntity entity : entities) {
+        for (final MediaRecordEntity entity : entities) {
 
             //is true if changes are applied
-            boolean listChanged = entity.getContentIds().removeAll(dto.getContentIds());
+            final boolean listChanged = entity.getContentIds().removeAll(dto.getContentIds());
 
             if (listChanged) {
                 repository.save(entity);
@@ -532,6 +635,30 @@ public class MediaService {
             }
 
         }
-
     }
+
+    /**
+     * Deletes MediaRecords without a file every night at 3 am.
+     */
+
+    @Scheduled(cron = "${mediarecord.delete.cron}")
+    @SneakyThrows
+    private void deleteMediaRecordsWithoutAFile() {
+        log.info("Running cleanup of MediaRecords");
+        final List<MediaRecordEntity> records = repository.findAll();
+
+        for (final var entity : records) {
+            final Map<String, String> minioVariables = createMinIOVariables(entity);
+            final String bucketId = minioVariables.get(BUCKET_ID);
+            final String filename = minioVariables.get(FILENAME);
+
+            if (!doesObjectExist(filename, bucketId)) {
+                repository.delete(entity);
+            }
+            // publish changes
+            topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
+        }
+        log.info("Cleanup completed");
+    }
+
 }

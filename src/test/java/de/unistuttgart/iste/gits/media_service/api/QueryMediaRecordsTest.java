@@ -3,10 +3,9 @@ package de.unistuttgart.iste.gits.media_service.api;
 import de.unistuttgart.iste.gits.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.gits.common.testutil.TablesToDelete;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import jakarta.transaction.Transactional;
-
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,21 +19,22 @@ import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepos
 
 @GraphQlApiTest
 @Transactional
-@TablesToDelete({"media_record_content_ids", "media_record"})
+@TablesToDelete({"media_record_content_ids","media_record_course_ids", "media_record"})
 @ActiveProfiles("test")
 class QueryMediaRecordsTest {
 
     @Autowired
     private MediaRecordRepository repository;
 
-    private ModelMapper mapper = new ModelMapper();
+    private final ModelMapper mapper = new ModelMapper();
 
     @Test
-    void testQueryAllMediaRecordsEmpty(GraphQlTester tester) {
-        String query = """
+    void testQueryAllMediaRecordsEmpty(final GraphQlTester tester) {
+        final String query = """
                 query {
                     mediaRecords {
                         id,
+                        courseIds,
                         name,
                         type,
                         contentIds
@@ -48,13 +48,14 @@ class QueryMediaRecordsTest {
     }
 
     @Test
-    void testQueryAllMediaRecords(GraphQlTester tester) {
-        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
+    void testQueryAllMediaRecords(final GraphQlTester tester) {
+        final List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
 
-        String query = """
+        final String query = """
                 query {
                     mediaRecords {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -72,13 +73,14 @@ class QueryMediaRecordsTest {
     }
 
     @Test
-    void testQueryMediaRecordsByIds(GraphQlTester tester) {
-        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
+    void testQueryMediaRecordsByIds(final GraphQlTester tester) {
+        final List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
 
-        String query = """
+        final String query = """
                 query {
                     mediaRecordsByIds(ids: ["%s", "%s"]) {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -96,15 +98,16 @@ class QueryMediaRecordsTest {
     }
 
     @Test
-    void testQueryFindMediaRecordsByIds(GraphQlTester tester) {
-        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
+    void testQueryFindMediaRecordsByIds(final GraphQlTester tester) {
+        final List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
 
-        UUID nonexistantUUID = UUID.randomUUID();
+        final UUID nonexistantUUID = UUID.randomUUID();
 
-        String query = """
+        final String query = """
                 query($ids: [UUID!]!) {
                     findMediaRecordsByIds(ids: $ids) {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -121,13 +124,14 @@ class QueryMediaRecordsTest {
     }
 
     @Test
-    void testQueryMediaRecordsByContentIds(GraphQlTester tester) {
-        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
+    void testQueryMediaRecordsByContentIds(final GraphQlTester tester) {
+        final List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
 
-        String query = """
+        final String query = """
                 query {
                     mediaRecordsByContentIds(contentIds: ["%s", "%s"]) {
                         id,
+                        courseIds,
                         name,
                         creatorId,
                         type,
@@ -137,7 +141,7 @@ class QueryMediaRecordsTest {
                 """.formatted(expectedMediaRecords.get(0).getContentIds().get(0),
                 expectedMediaRecords.get(1).getContentIds().get(0));
 
-        GraphQlTester.Response response = tester.document(query).execute();
+        final GraphQlTester.Response response = tester.document(query).execute();
 
         response.path("mediaRecordsByContentIds").entityList(List.class).hasSize(2);
 

@@ -2,7 +2,7 @@ package de.unistuttgart.iste.gits.media_service.api;
 
 import de.unistuttgart.iste.gits.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.gits.common.testutil.TablesToDelete;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import de.unistuttgart.iste.gits.media_service.test_config.MockMinIoClientConfiguration;
 import jakarta.transaction.Transactional;
@@ -20,7 +20,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 @ContextConfiguration(classes = MockMinIoClientConfiguration.class)
-@TablesToDelete({"media_record_content_ids", "media_record"})
+@TablesToDelete({"media_record_content_ids","media_record_course_ids", "media_record"})
 @Transactional
 @GraphQlApiTest
 class MutationDeleteMediaRecordTest {
@@ -29,12 +29,12 @@ class MutationDeleteMediaRecordTest {
     private MediaRecordRepository repository;
 
     @Test
-    void testDeleteMediaRecord(GraphQlTester tester) {
+    void testDeleteMediaRecord(final GraphQlTester tester) {
         List<MediaRecordEntity> createdMediaRecords = fillRepositoryWithMediaRecords(repository);
 
         createdMediaRecords = repository.saveAll(createdMediaRecords);
 
-        String query = """
+        final String query = """
                 mutation {
                     deleteMediaRecord(id: "%s")
                 }
@@ -45,8 +45,8 @@ class MutationDeleteMediaRecordTest {
                 .path("deleteMediaRecord").entity(UUID.class).isEqualTo(createdMediaRecords.get(0).getId());
 
         // ensure that the media record left in the db is the other one (the one we didn't delete)
-        assertThat(repository.count(), is((long)createdMediaRecords.size() - 1));
-        MediaRecordEntity remainingMediaRecord = repository.findAll().get(0);
+        assertThat(repository.count(), is((long) createdMediaRecords.size() - 1));
+        final MediaRecordEntity remainingMediaRecord = repository.findAll().get(0);
         assertThat(remainingMediaRecord, equalTo(createdMediaRecords.get(1)));
     }
 }

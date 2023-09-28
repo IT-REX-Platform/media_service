@@ -1,10 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.controller;
 
 import de.unistuttgart.iste.gits.common.user_handling.LoggedInUser;
-import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
-import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
-import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
-import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
+import de.unistuttgart.iste.gits.generated.dto.*;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
 import graphql.schema.DataFetchingEnvironment;
@@ -28,7 +25,7 @@ public class MediaController {
     private final MediaUserProgressDataService mediaUserProgressDataService;
 
     @QueryMapping
-    public List<MediaRecord> mediaRecords(DataFetchingEnvironment env) {
+    public List<MediaRecord> mediaRecords(final DataFetchingEnvironment env) {
         return mediaService.getAllMediaRecords(
                 uploadUrlInSelectionSet(env),
                 downloadUrlInSelectionSet(env)
@@ -36,7 +33,7 @@ public class MediaController {
     }
 
     @QueryMapping
-    public List<MediaRecord> mediaRecordsByIds(@Argument List<UUID> ids, DataFetchingEnvironment env) {
+    public List<MediaRecord> mediaRecordsByIds(@Argument final List<UUID> ids, final DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsByIds(
                 ids,
                 uploadUrlInSelectionSet(env),
@@ -44,7 +41,8 @@ public class MediaController {
         );
     }
 
-    @QueryMapping List<MediaRecord> findMediaRecordsByIds(@Argument List<UUID> ids, DataFetchingEnvironment env) {
+    @QueryMapping
+    public List<MediaRecord> findMediaRecordsByIds(@Argument final List<UUID> ids, final DataFetchingEnvironment env) {
         return mediaService.findMediaRecordsByIds(
                 ids,
                 uploadUrlInSelectionSet(env),
@@ -53,7 +51,8 @@ public class MediaController {
     }
 
     @QueryMapping
-    public List<MediaRecord> userMediaRecords(@ContextValue LoggedInUser currentUser, DataFetchingEnvironment env) {
+    public List<MediaRecord> userMediaRecords(@ContextValue final LoggedInUser currentUser,
+                                              final DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsForUser(
                 currentUser.getId(),
                 uploadUrlInSelectionSet(env),
@@ -62,7 +61,8 @@ public class MediaController {
     }
 
     @QueryMapping
-    List<List<MediaRecord>> mediaRecordsByContentIds(@Argument List<UUID> contentIds, DataFetchingEnvironment env) {
+    public List<List<MediaRecord>> mediaRecordsByContentIds(@Argument final List<UUID> contentIds,
+                                                            final DataFetchingEnvironment env) {
         return mediaService.getMediaRecordsByContentIds(
                 contentIds,
                 uploadUrlInSelectionSet(env),
@@ -70,16 +70,28 @@ public class MediaController {
         );
     }
 
+    @QueryMapping
+    public List<List<MediaRecord>> mediaRecordsForCourses(@Argument final List<UUID> courseIds, final DataFetchingEnvironment env) {
+        return mediaService.getMediaRecordsForCourses(
+                courseIds,
+                uploadUrlInSelectionSet(env),
+                downloadUrlInSelectionSet(env)
+        );
+    }
+
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
-    public MediaRecordProgressData userProgressData(MediaRecord mediaRecord, @ContextValue LoggedInUser currentUser) {
+    public MediaRecordProgressData userProgressData(final MediaRecord mediaRecord,
+                                                    @ContextValue final LoggedInUser currentUser) {
         return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), currentUser.getId());
     }
 
     @MutationMapping
-    public MediaRecord createMediaRecord(@Argument CreateMediaRecordInput input,
-                                         @ContextValue LoggedInUser currentUser,
-                                         DataFetchingEnvironment env) {
+    public MediaRecord createMediaRecord(@Argument final List<UUID> courseIds,
+                                         @Argument final CreateMediaRecordInput input,
+                                         @ContextValue final LoggedInUser currentUser,
+                                         final DataFetchingEnvironment env) {
         return mediaService.createMediaRecord(
+                courseIds,
                 input,
                 currentUser.getId(),
                 uploadUrlInSelectionSet(env),
@@ -88,13 +100,16 @@ public class MediaController {
     }
 
     @MutationMapping
-    public UUID deleteMediaRecord(@Argument UUID id) {
+    public UUID deleteMediaRecord(@Argument final UUID id) {
         return mediaService.deleteMediaRecord(id);
     }
 
     @MutationMapping
-    public MediaRecord updateMediaRecord(@Argument UpdateMediaRecordInput input, DataFetchingEnvironment env) {
+    public MediaRecord updateMediaRecord(@Argument final List<UUID> courseIds,
+                                         @Argument final UpdateMediaRecordInput input,
+                                         final DataFetchingEnvironment env) {
         return mediaService.updateMediaRecord(
+                courseIds,
                 input,
                 uploadUrlInSelectionSet(env),
                 downloadUrlInSelectionSet(env)
@@ -102,13 +117,15 @@ public class MediaController {
     }
 
     @MutationMapping
-    public MediaRecord logMediaRecordWorkedOn(@Argument UUID mediaRecordId, @ContextValue LoggedInUser currentUser) {
+    public MediaRecord logMediaRecordWorkedOn(@Argument final UUID mediaRecordId,
+                                              @ContextValue final LoggedInUser currentUser) {
         return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, currentUser.getId());
     }
 
     @MutationMapping
-    public List<MediaRecord> linkMediaRecordsWithContent(@Argument UUID contentId, @Argument List<UUID> mediaRecordIds) {
-        return mediaService.linkMediaRecordsWithContent(contentId, mediaRecordIds);
+    public List<MediaRecord> setLinkedMediaRecordsForContent(@Argument final UUID contentId,
+                                                         @Argument final List<UUID> mediaRecordIds) {
+        return mediaService.setLinkedMediaRecordsForContent(contentId, mediaRecordIds);
     }
 
     /**
@@ -117,7 +134,7 @@ public class MediaController {
      * @param env The DataFetchingEnvironment of the graphql query
      * @return Returns true if the downloadUrl field is in the selection set of the passed DataFetchingEnvironment.
      */
-    private boolean downloadUrlInSelectionSet(DataFetchingEnvironment env) {
+    private boolean downloadUrlInSelectionSet(final DataFetchingEnvironment env) {
         return env.getSelectionSet().contains("downloadUrl");
     }
 
@@ -126,7 +143,19 @@ public class MediaController {
      * @param env The DataFetchingEnvironment of the graphql query
      * @return Returns true if the uploadUrl field is in the selection set of the passed DataFetchingEnvironment.
      */
-    private boolean uploadUrlInSelectionSet(DataFetchingEnvironment env) {
+    private boolean uploadUrlInSelectionSet(final DataFetchingEnvironment env) {
         return env.getSelectionSet().contains("uploadUrl");
+    }
+
+    /**
+     * Add the Course to the selected mediaRecords
+     *
+     * @param courseId of the course
+     * @param mediaRecordIds of the mediaRecords to be changed
+     * @return the updated mediaRecords
+     */
+    @MutationMapping
+    public List<MediaRecord> setMediaRecordsForCourse(@Argument final UUID courseId, @Argument final List<UUID> mediaRecordIds) {
+        return mediaService.setMediaRecordsForCourse(courseId, mediaRecordIds);
     }
 }

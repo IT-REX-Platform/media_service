@@ -4,8 +4,8 @@ import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
 import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordProgressDataEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordProgressDataEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordProgressDataRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -35,6 +35,13 @@ public class MediaUserProgressDataService {
                 .orElseGet(() -> initializeProgressData(mediaRecordId, userId));
     }
 
+    /**
+     * Initializes the progress data for the given media record and user.
+     *
+     * @param mediaRecordId The media record id
+     * @param userId        The user id
+     * @return The media record progress data entity, initialized with the given ids and the worked on flag set to false
+     */
     public MediaRecordProgressDataEntity initializeProgressData(UUID mediaRecordId, UUID userId) {
         var primaryKey = new MediaRecordProgressDataEntity.PrimaryKey(mediaRecordId, userId);
         var progressData = MediaRecordProgressDataEntity.builder()

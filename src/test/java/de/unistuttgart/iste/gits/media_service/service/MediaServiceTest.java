@@ -1,57 +1,85 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
-import de.unistuttgart.iste.gits.common.testutil.TablesToDelete;
-import de.unistuttgart.iste.gits.media_service.persistence.dao.MediaRecordEntity;
+import de.unistuttgart.iste.gits.media_service.config.DevTopicPublisherConfiguration;
+import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import de.unistuttgart.iste.gits.media_service.test_config.MockMinIoClientConfiguration;
+import io.minio.MinioClient;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ContextConfiguration;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepositoryUtil.fillRepositoryWithMediaRecords;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-@ContextConfiguration(classes = MockMinIoClientConfiguration.class)
-@TablesToDelete({"media_record_content_ids", "media_record"})
-@Transactional
-@SpringBootTest
-@Testcontainers
 class MediaServiceTest {
 
-    @Autowired
-    private MediaService service;
+    private final MediaRecordRepository repository = mock(MediaRecordRepository.class);
 
-    @Autowired
-    private MediaRecordRepository repository;
+    private final MinioClient mockMinIoClient = new MockMinIoClientConfiguration().getTestMinIoClient();
 
-    ModelMapper mapper = new ModelMapper();
+    private final ModelMapper mapper = new ModelMapper();
+
+    private final MediaService service = new MediaService(mockMinIoClient, mockMinIoClient, repository,
+            mapper, new DevTopicPublisherConfiguration().getTopicPublisher());
+
+
+    MediaServiceTest() throws Exception {
+        // constructor with exception required because of min io mock
+    }
 
     @Test
     void testRequireMediaRecordExisting() {
-        List<MediaRecordEntity> entities = fillRepositoryWithMediaRecords(repository);
+        final MediaRecordEntity entity = MediaRecordEntity.builder()
+                .id(UUID.randomUUID())
+                .contentIds(List.of(UUID.randomUUID()))
+                .creatorId(UUID.randomUUID())
+                .progressData(List.of())
+                .build();
+        when(repository.findById(entity.getId())).thenReturn(Optional.of(entity));
 
-        assertDoesNotThrow(() -> service.requireMediaRecordExisting(entities.get(0).getId()));
-        assertThrows(EntityNotFoundException.class, () -> service.requireMediaRecordExisting(UUID.randomUUID()));
+        assertThat(service.requireMediaRecordExisting(entity.getId()), is(entity));
+
+        final UUID notExistingId = UUID.randomUUID();
+        assertThrows(EntityNotFoundException.class, () -> service.requireMediaRecordExisting(notExistingId));
     }
 
     @Test
     void testGetMediaRecordById() {
-        List<MediaRecordEntity> entities = fillRepositoryWithMediaRecords(repository);
 
-        MediaRecordEntity expected = entities.get(0);
-        MediaRecordEntity actual = mapper.map(service.getMediaRecordById(expected.getId()), MediaRecordEntity.class);
+        final MediaRecordEntity entity = MediaRecordEntity.builder()
+                .id(UUID.randomUUID())
+                .contentIds(List.of(UUID.randomUUID()))
+                .creatorId(UUID.randomUUID())
+                .progressData(List.of())
+                .build();
 
-        assertThat(actual, is(expected));
+        when(repository.findById(entity.getId())).thenReturn(Optional.of(entity));
+        final MediaRecordEntity actual = mapper.map(service.getMediaRecordById(entity.getId()), MediaRecordEntity.class);
+
+        assertThat(actual, is(entity));
+    }
+
+    @Test
+    void testGetMediaRecordByIdWithCourseIds() {
+        final List<UUID> courseIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+        final MediaRecordEntity entity = MediaRecordEntity.builder()
+                .id(UUID.randomUUID())
+                .courseIds(courseIds)
+                .contentIds(List.of(UUID.randomUUID()))
+                .creatorId(UUID.randomUUID())
+                .progressData(List.of())
+                .build();
+
+        when(repository.findById(entity.getId())).thenReturn(Optional.of(entity));
+        final MediaRecordEntity actual = mapper.map(service.getMediaRecordById(entity.getId()), MediaRecordEntity.class);
+
+        assertThat(actual, is(entity));
     }
 }

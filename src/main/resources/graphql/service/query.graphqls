@@ -1,0 +1,30 @@
+type Query {
+    """
+    Returns the media records with the given IDs. Throws an error if a MediaRecord corresponding to a given ID
+    cannot be found.
+    """
+    mediaRecordsByIds(ids: [UUID!]!): [MediaRecord!]!
+    """
+    Like mediaRecordsByIds() returns the media records with the given IDs, but instead of throwing an error if an ID
+    cannot be found, it instead returns NULL for that media record.
+    """
+    findMediaRecordsByIds(ids: [UUID!]!): [MediaRecord]!
+    """
+    Returns all media records of the system.
+    """
+    mediaRecords: [MediaRecord!]! @deprecated(reason: "In production there should probably be no way to get all media records of the system.")
+    """
+    Returns all media records which the current user created.
+    """
+    userMediaRecords: [MediaRecord!]!
+    """
+    Returns the media records associated the given content IDs as a list of lists where each sublist contains
+    the media records associated with the content ID at the same index in the input list
+    """
+    mediaRecordsByContentIds(contentIds: [UUID!]!): [[MediaRecord!]!]!
+
+    """
+    Returns all media records for the given CourseIds
+    """
+    mediaRecordsForCourses(courseIds: [UUID!]!): [[MediaRecord!]!]!
+}

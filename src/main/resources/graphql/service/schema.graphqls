@@ -1,0 +1,105 @@
+# schema file of the microservice
+
+# defines data types, queries and mutations
+# this can be done in a separate files as long as they are in this folder and
+# end with .graphqls
+
+type MediaRecord {
+  """
+  ID of the media record
+  """
+  id: UUID!
+  """
+  Ids of the courses this MediaRecord is associated with
+  """
+  courseIds: [UUID!]!
+  """
+  Name of the media record
+  """
+  name: String!
+  """
+  User ID of the creator of the media record.
+  """
+  creatorId: UUID!
+  """
+  Type of the media record
+  """
+  type: MediaType!
+  """
+  IDs of the MediaContents this media record is associated with
+  """
+  contentIds: [UUID!]!
+  """
+  Temporary upload url for the media record
+  """
+  uploadUrl: String!
+  """
+  Temporary download url for the media record
+  """
+  downloadUrl: String!
+
+  """
+  The progress data of the given user for this medium.
+  """
+  userProgressData: MediaRecordProgressData!
+}
+
+type MediaRecordProgressData {
+
+  """
+  Whether the medium has been worked on by the user.
+  """
+  workedOn: Boolean!
+  """
+  Date on which the medium was worked on by the user.
+  This is null if the medium has not been worked on by the user.
+  """
+  dateWorkedOn: DateTime
+}
+
+input CreateMediaRecordInput {
+  """
+  Name of the media record. Cannot be blank, maximum length 255 characters.
+  """
+  name: String! @NotBlank @Size(max: 255)
+  """
+  Type of the media record.
+  """
+  type: MediaType!
+  """
+  IDs of the MediaContents this media record is associated with
+  """
+  contentIds: [UUID!]!
+}
+
+input UpdateMediaRecordInput {
+  """
+  ID of the media record which should be updated
+  """
+  id: UUID!
+  """
+  New name of the media record. Cannot be blank, maximum length 255 characters.
+  """
+  name: String! @NotBlank @Size(max: 255)
+  """
+  New type of the media record.
+  """
+  type: MediaType!
+  """
+  IDs of the MediaContents this media record is associated with
+  """
+  contentIds: [UUID!]!
+}
+
+"""
+The type of the media record
+"""
+enum MediaType {
+  VIDEO
+  AUDIO
+  IMAGE
+  PRESENTATION
+  DOCUMENT
+  URL
+}
+
