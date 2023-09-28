@@ -37,3 +37,9 @@
 The API is documented in the [api.md file](api.md).
 
 It can be accessed at `/graphql` and explored via the GraphiQL Playground at `/graphiql`.
+
+## Get started
+
+A guide how to start development can be
+found [wiki](https://gits-enpro.readthedocs.io/en/latest/dev-manuals/backend/get-started.html).
+
