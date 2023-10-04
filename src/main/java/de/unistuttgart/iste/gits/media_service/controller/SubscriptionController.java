@@ -22,9 +22,9 @@ public class SubscriptionController {
 
     private final MediaService mediaService;
 
-    @Topic(name = "content-changes", pubsubName = "gits")
-    @PostMapping(path = "/media-service/content-changes-pubsub")
-    public Mono<Void> updateAssociation(@RequestBody CloudEvent<ContentChangeEvent> cloudEvent, @RequestHeader Map<String, String> headers) {
+    @Topic(name = "content-changed", pubsubName = "gits")
+    @PostMapping(path = "/media-service/content-changed-pubsub")
+    public Mono<Void> updateAssociation(@RequestBody final CloudEvent<ContentChangeEvent> cloudEvent, @RequestHeader final Map<String, String> headers) {
 
         return Mono.fromRunnable(() -> {
             try {

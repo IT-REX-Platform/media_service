@@ -6,7 +6,6 @@ import de.unistuttgart.iste.gits.common.exception.IncompleteEventMessageExceptio
 import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
-import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import io.minio.GetPresignedObjectUrlArgs;
@@ -56,11 +55,6 @@ public class MediaService {
      * Mapper used to map media record DTOs to database Entities and vice-versa.
      */
     private final ModelMapper modelMapper;
-
-    /**
-     * dapr topic publisher
-     */
-    private final TopicPublisher topicPublisher;
 
     /**
      * Returns all media records.
@@ -349,9 +343,6 @@ public class MediaService {
 
         repository.save(entity);
 
-        //publish changes
-        topicPublisher.notifyResourceChange(entity, CrudOperation.CREATE);
-
         return fillMediaRecordUrlsIfRequested(
                 mapEntityToMediaRecord(entity),
                 generateUploadUrl,
@@ -386,8 +377,6 @@ public class MediaService {
                             .build());
         }
 
-        // publish changes
-        topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
         return id;
     }
 
@@ -420,9 +409,6 @@ public class MediaService {
 
         // save updated entity
         final MediaRecordEntity entity = repository.save(newEntity);
-
-        //publish changes
-        topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
 
         return fillMediaRecordUrlsIfRequested(
                 mapEntityToMediaRecord(entity),
@@ -630,8 +616,6 @@ public class MediaService {
 
             if (listChanged) {
                 repository.save(entity);
-                //publish changes to dapr topic
-                topicPublisher.notifyResourceChange(entity, CrudOperation.UPDATE);
             }
 
         }
@@ -655,8 +639,6 @@ public class MediaService {
             if (!doesObjectExist(filename, bucketId)) {
                 repository.delete(entity);
             }
-            // publish changes
-            topicPublisher.notifyResourceChange(entity, CrudOperation.DELETE);
         }
         log.info("Cleanup completed");
     }

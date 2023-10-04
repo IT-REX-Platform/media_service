@@ -1,8 +1,8 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
+import de.unistuttgart.iste.gits.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
 import de.unistuttgart.iste.gits.generated.dto.*;
-import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordProgressDataEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordProgressDataRepository;
@@ -42,15 +42,15 @@ class MediaUserProgressDataServiceTest {
         doReturn(Optional.empty()).when(mediaRecordProgressDataRepository).findById(any());
         doAnswer(returnsFirstArg()).when(mediaRecordProgressDataRepository).save(any());
 
-        UUID userId = UUID.randomUUID();
-        UUID mediaRecordId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
+        final UUID mediaRecordId = UUID.randomUUID();
 
-        MediaRecordProgressData actual = mediaUserProgressDataService.getUserProgressData(mediaRecordId, userId);
+        final MediaRecordProgressData actual = mediaUserProgressDataService.getUserProgressData(mediaRecordId, userId);
 
         assertThat(actual.getWorkedOn(), is(false));
         assertThat(actual.getDateWorkedOn(), is(nullValue()));
 
-        MediaRecordProgressDataEntity expectedEntity = MediaRecordProgressDataEntity.builder()
+        final MediaRecordProgressDataEntity expectedEntity = MediaRecordProgressDataEntity.builder()
                 .primaryKey(new MediaRecordProgressDataEntity.PrimaryKey(mediaRecordId, userId))
                 .workedOn(false)
                 .build();
@@ -64,8 +64,8 @@ class MediaUserProgressDataServiceTest {
      */
     @Test
     void testEventIsPublishedWhenSingleMediaOfContentIsProgressed() {
-        UUID contentId = UUID.randomUUID();
-        MediaRecord mediaRecord = MediaRecord.builder()
+        final UUID contentId = UUID.randomUUID();
+        final MediaRecord mediaRecord = MediaRecord.builder()
                 .setId(UUID.randomUUID())
                 .setContentIds(List.of(contentId))
                 .setName("test")
@@ -76,7 +76,7 @@ class MediaUserProgressDataServiceTest {
 
         mockWorkedOnFor(mediaRecord, false);
 
-        UUID userId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
         mediaUserProgressDataService
                 .logMediaRecordWorkedOn(mediaRecord.getId(), userId);
 
@@ -97,8 +97,8 @@ class MediaUserProgressDataServiceTest {
      */
     @Test
     void testNoEventPublishedIfMediaRecordWasAlreadyWorkedOnBefore() {
-        UUID contentId = UUID.randomUUID();
-        MediaRecord mediaRecord = MediaRecord.builder()
+        final UUID contentId = UUID.randomUUID();
+        final MediaRecord mediaRecord = MediaRecord.builder()
                 .setId(UUID.randomUUID())
                 .setContentIds(List.of(contentId))
                 .setName("test")
@@ -122,14 +122,14 @@ class MediaUserProgressDataServiceTest {
      */
     @Test
     void testEventIsPublishedOnlyWhenAllMediasOfContentAreWorkedOn() {
-        UUID contentId = UUID.randomUUID();
-        MediaRecord mediaRecord1 = MediaRecord.builder()
+        final UUID contentId = UUID.randomUUID();
+        final MediaRecord mediaRecord1 = MediaRecord.builder()
                 .setId(UUID.randomUUID())
                 .setContentIds(List.of(contentId))
                 .setName("test")
                 .setType(MediaType.AUDIO)
                 .build();
-        MediaRecord mediaRecord2 = MediaRecord.builder()
+        final MediaRecord mediaRecord2 = MediaRecord.builder()
                 .setId(UUID.randomUUID())
                 .setContentIds(List.of(contentId))
                 .setName("test")
@@ -159,7 +159,7 @@ class MediaUserProgressDataServiceTest {
         verify(topicPublisher, never()).notifyUserWorkedOnContent(any());
     }
 
-    private MediaRecordEntity dtoToEntity(MediaRecord mediaRecord) {
+    private MediaRecordEntity dtoToEntity(final MediaRecord mediaRecord) {
         return new ModelMapper().map(mediaRecord, MediaRecordEntity.class);
     }
 
@@ -170,8 +170,8 @@ class MediaUserProgressDataServiceTest {
      * @param workedOn the values to return for the call to the repository
      */
     @SuppressWarnings("SameParameterValue")
-    private void mockWorkedOnFor(MediaRecord record, Boolean workedOn) {
-        var mockReturnValue = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOn).build());
+    private void mockWorkedOnFor(final MediaRecord record, final Boolean workedOn) {
+        final var mockReturnValue = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOn).build());
         doReturn(mockReturnValue)
                 .when(mediaRecordProgressDataRepository)
                 .findById(argThat(arg -> arg.getMediaRecordId().equals(record.getId())));
@@ -181,9 +181,9 @@ class MediaUserProgressDataServiceTest {
      * Mock work on for the given media record for two calls to the repository
      */
     @SuppressWarnings("SameParameterValue")
-    private void mockWorkedOnFor(MediaRecord record, Boolean workedOnFirst, Boolean workedOnSecond) {
-        var mockReturnValue1 = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOnFirst).build());
-        var mockReturnValue2 = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOnSecond).build());
+    private void mockWorkedOnFor(final MediaRecord record, final Boolean workedOnFirst, final Boolean workedOnSecond) {
+        final var mockReturnValue1 = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOnFirst).build());
+        final var mockReturnValue2 = Optional.of(MediaRecordProgressDataEntity.builder().workedOn(workedOnSecond).build());
         doReturn(mockReturnValue1, mockReturnValue2)
                 .when(mediaRecordProgressDataRepository)
                 .findById(argThat(arg -> arg.getMediaRecordId().equals(record.getId())));

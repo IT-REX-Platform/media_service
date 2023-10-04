@@ -1,9 +1,9 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
+import de.unistuttgart.iste.gits.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
-import de.unistuttgart.iste.gits.media_service.dapr.TopicPublisher;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordProgressDataEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordProgressDataRepository;
@@ -24,13 +24,13 @@ public class MediaUserProgressDataService {
     private final ModelMapper modelMapper;
     private final TopicPublisher topicPublisher;
 
-    public MediaRecordProgressData getUserProgressData(UUID mediaRecordId, UUID userId) {
-        var entity = getUserProgressDataEntity(mediaRecordId, userId);
+    public MediaRecordProgressData getUserProgressData(final UUID mediaRecordId, final UUID userId) {
+        final var entity = getUserProgressDataEntity(mediaRecordId, userId);
         return mapToDto(entity);
     }
 
-    public MediaRecordProgressDataEntity getUserProgressDataEntity(UUID mediaRecordId, UUID userId) {
-        var primaryKey = new MediaRecordProgressDataEntity.PrimaryKey(mediaRecordId, userId);
+    public MediaRecordProgressDataEntity getUserProgressDataEntity(final UUID mediaRecordId, final UUID userId) {
+        final var primaryKey = new MediaRecordProgressDataEntity.PrimaryKey(mediaRecordId, userId);
         return mediaRecordProgressDataRepository.findById(primaryKey)
                 .orElseGet(() -> initializeProgressData(mediaRecordId, userId));
     }
@@ -42,9 +42,9 @@ public class MediaUserProgressDataService {
      * @param userId        The user id
      * @return The media record progress data entity, initialized with the given ids and the worked on flag set to false
      */
-    public MediaRecordProgressDataEntity initializeProgressData(UUID mediaRecordId, UUID userId) {
-        var primaryKey = new MediaRecordProgressDataEntity.PrimaryKey(mediaRecordId, userId);
-        var progressData = MediaRecordProgressDataEntity.builder()
+    public MediaRecordProgressDataEntity initializeProgressData(final UUID mediaRecordId, final UUID userId) {
+        final var primaryKey = new MediaRecordProgressDataEntity.PrimaryKey(mediaRecordId, userId);
+        final var progressData = MediaRecordProgressDataEntity.builder()
                 .primaryKey(primaryKey)
                 .workedOn(false)
                 .build();
@@ -58,11 +58,11 @@ public class MediaUserProgressDataService {
      * @param userId        The user id
      * @return The media record
      */
-    public MediaRecord logMediaRecordWorkedOn(UUID mediaRecordId, UUID userId) {
-        var mediaRecord = mediaService.getMediaRecordById(mediaRecordId);
-        var progressData = getUserProgressDataEntity(mediaRecordId, userId);
+    public MediaRecord logMediaRecordWorkedOn(final UUID mediaRecordId, final UUID userId) {
+        final var mediaRecord = mediaService.getMediaRecordById(mediaRecordId);
+        final var progressData = getUserProgressDataEntity(mediaRecordId, userId);
 
-        boolean wasAlreadyWorkedOnBefore = progressData.isWorkedOn();
+        final boolean wasAlreadyWorkedOnBefore = progressData.isWorkedOn();
         updateProgressDataEntity(progressData);
 
         // prevent multiple triggers of the content learned event
@@ -73,7 +73,7 @@ public class MediaUserProgressDataService {
         return mediaRecord;
     }
 
-    private void updateProgressDataEntity(MediaRecordProgressDataEntity progressData) {
+    private void updateProgressDataEntity(final MediaRecordProgressDataEntity progressData) {
         progressData.setWorkedOn(true);
         progressData.setWorkedOnDate(OffsetDateTime.now());
         mediaRecordProgressDataRepository.save(progressData);
@@ -88,13 +88,13 @@ public class MediaUserProgressDataService {
      * @param userId      The user id
      * @param mediaRecord The media record
      */
-    private void publishProgressEventsIfContentsAreCompletelyWorkedOn(UUID userId, MediaRecord mediaRecord) {
-        List<UUID> associatedContentIds = mediaRecord.getContentIds();
+    private void publishProgressEventsIfContentsAreCompletelyWorkedOn(final UUID userId, final MediaRecord mediaRecord) {
+        final List<UUID> associatedContentIds = mediaRecord.getContentIds();
 
-        for (var contentId : associatedContentIds) {
-            List<MediaRecordEntity> associatedMediaRecords = mediaService.getMediaRecordEntitiesByContentId(contentId);
+        for (final var contentId : associatedContentIds) {
+            final List<MediaRecordEntity> associatedMediaRecords = mediaService.getMediaRecordEntitiesByContentId(contentId);
 
-            boolean allAssociatedMediaRecordsWorkedOn = associatedMediaRecords.stream()
+            final boolean allAssociatedMediaRecordsWorkedOn = associatedMediaRecords.stream()
                     .map(mediaRecordEntity -> getUserProgressDataEntity(mediaRecordEntity.getId(), userId))
                     .allMatch(MediaRecordProgressDataEntity::isWorkedOn);
 
@@ -104,7 +104,7 @@ public class MediaUserProgressDataService {
         }
     }
 
-    private void publishUserProgressEvent(UUID userId, UUID contentId) {
+    private void publishUserProgressEvent(final UUID userId, final UUID contentId) {
         topicPublisher.notifyUserWorkedOnContent(
                 UserProgressLogEvent.builder()
                         .userId(userId)
@@ -117,7 +117,7 @@ public class MediaUserProgressDataService {
         );
     }
 
-    private MediaRecordProgressData mapToDto(MediaRecordProgressDataEntity entity) {
+    private MediaRecordProgressData mapToDto(final MediaRecordProgressDataEntity entity) {
         return modelMapper.map(entity, MediaRecordProgressData.class);
     }
 }

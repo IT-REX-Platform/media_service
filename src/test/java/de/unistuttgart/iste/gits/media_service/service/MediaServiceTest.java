@@ -1,6 +1,5 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
-import de.unistuttgart.iste.gits.media_service.config.DevTopicPublisherConfiguration;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import de.unistuttgart.iste.gits.media_service.test_config.MockMinIoClientConfiguration;
@@ -9,7 +8,9 @@ import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -26,7 +27,7 @@ class MediaServiceTest {
     private final ModelMapper mapper = new ModelMapper();
 
     private final MediaService service = new MediaService(mockMinIoClient, mockMinIoClient, repository,
-            mapper, new DevTopicPublisherConfiguration().getTopicPublisher());
+            mapper);
 
 
     MediaServiceTest() throws Exception {
