@@ -1,7 +1,9 @@
 package de.unistuttgart.iste.gits.media_service.api;
 
 import de.unistuttgart.iste.gits.common.testutil.GraphQlApiTest;
+import de.unistuttgart.iste.gits.common.testutil.InjectCurrentUserHeader;
 import de.unistuttgart.iste.gits.common.testutil.TablesToDelete;
+import de.unistuttgart.iste.gits.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordRepository;
 import de.unistuttgart.iste.gits.media_service.test_config.MockMinIoClientConfiguration;
@@ -17,6 +19,7 @@ import org.springframework.test.context.ContextConfiguration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static de.unistuttgart.iste.gits.common.testutil.TestUsers.userWithMemberships;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
@@ -34,22 +37,12 @@ class MutationCreateMediaRecordTest {
     @Autowired
     private MinioClient minioClient;
 
+    @InjectCurrentUserHeader
+    private final LoggedInUser currentUser = userWithMemberships();
+
     @Test
-    void testCreateMediaRecord(HttpGraphQlTester tester) throws Exception {
-        final UUID userId1 = UUID.randomUUID();
-
-        final String currentUser = """
-                {
-                    "id": "%s",
-                    "userName": "MyUserName",
-                    "firstName": "John",
-                    "lastName": "Doe",
-                    "courseMemberships": []
-                }
-                """.formatted(userId1.toString());
-
-        // insert user header into tester
-        tester = tester.mutate().header("CurrentUser", currentUser).build();
+    void testCreateMediaRecord(final HttpGraphQlTester tester) throws Exception {
+        final UUID userId1 = currentUser.getId();
 
         final String query = """
                 mutation {

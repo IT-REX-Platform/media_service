@@ -1,7 +1,7 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
 import de.unistuttgart.iste.gits.common.dapr.TopicPublisher;
-import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
+import de.unistuttgart.iste.gits.common.event.ContentProgressedEvent;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
@@ -106,7 +106,7 @@ public class MediaUserProgressDataService {
 
     private void publishUserProgressEvent(final UUID userId, final UUID contentId) {
         topicPublisher.notifyUserWorkedOnContent(
-                UserProgressLogEvent.builder()
+                ContentProgressedEvent.builder()
                         .userId(userId)
                         .contentId(contentId)
                         .hintsUsed(0)

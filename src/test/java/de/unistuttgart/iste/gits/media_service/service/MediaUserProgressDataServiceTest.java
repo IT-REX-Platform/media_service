@@ -1,15 +1,19 @@
 package de.unistuttgart.iste.gits.media_service.service;
 
 import de.unistuttgart.iste.gits.common.dapr.TopicPublisher;
-import de.unistuttgart.iste.gits.common.event.UserProgressLogEvent;
-import de.unistuttgart.iste.gits.generated.dto.*;
+import de.unistuttgart.iste.gits.common.event.ContentProgressedEvent;
+import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
+import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
+import de.unistuttgart.iste.gits.generated.dto.MediaType;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.entity.MediaRecordProgressDataEntity;
 import de.unistuttgart.iste.gits.media_service.persistence.repository.MediaRecordProgressDataRepository;
 import org.junit.jupiter.api.Test;
 import org.modelmapper.ModelMapper;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -80,7 +84,7 @@ class MediaUserProgressDataServiceTest {
         mediaUserProgressDataService
                 .logMediaRecordWorkedOn(mediaRecord.getId(), userId);
 
-        verify(topicPublisher, times(1)).notifyUserWorkedOnContent(UserProgressLogEvent.builder()
+        verify(topicPublisher, times(1)).notifyUserWorkedOnContent(ContentProgressedEvent.builder()
                 .correctness(1.0)
                 .timeToComplete(null)
                 .success(true)
