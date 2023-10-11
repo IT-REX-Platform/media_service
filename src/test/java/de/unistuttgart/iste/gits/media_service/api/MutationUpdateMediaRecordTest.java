@@ -17,7 +17,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static de.unistuttgart.iste.gits.common.testutil.TestUsers.userWithMemberships;
-import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepositoryUtil.fillRepositoryWithMediaRecords;
+import static de.unistuttgart.iste.gits.media_service.test_util.CourseMembershipUtil.dummyCourseMembershipBuilder;
+import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepositoryUtil.fillRepositoryWithMediaRecordsAndCourseIds;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
@@ -31,12 +32,16 @@ class MutationUpdateMediaRecordTest {
     @Autowired
     private MediaRecordRepository repository;
 
+    private UUID courseId1 = UUID.randomUUID();
+
+    private LoggedInUser.CourseMembership courseMembership = dummyCourseMembershipBuilder(courseId1);
+
     @InjectCurrentUserHeader
-    private final LoggedInUser currentUser = userWithMemberships();
+    private final LoggedInUser currentUser = userWithMemberships(courseMembership);
 
     @Test
     void testUpdateMediaRecord(final GraphQlTester tester) {
-        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecords(repository);
+        List<MediaRecordEntity> expectedMediaRecords = fillRepositoryWithMediaRecordsAndCourseIds(repository, courseId1, UUID.randomUUID());
 
         expectedMediaRecords = repository.saveAll(expectedMediaRecords);
 

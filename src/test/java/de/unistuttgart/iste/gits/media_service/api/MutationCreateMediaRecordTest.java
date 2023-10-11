@@ -16,10 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
 import org.springframework.test.context.ContextConfiguration;
 
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static de.unistuttgart.iste.gits.common.testutil.TestUsers.userWithMemberships;
+import static de.unistuttgart.iste.gits.common.testutil.TestUsers.userWithMembershipsAndRealmRoles;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
@@ -38,7 +40,7 @@ class MutationCreateMediaRecordTest {
     private MinioClient minioClient;
 
     @InjectCurrentUserHeader
-    private final LoggedInUser currentUser = userWithMemberships();
+    private final LoggedInUser currentUser = userWithMembershipsAndRealmRoles(Set.of(LoggedInUser.RealmRole.COURSE_CREATOR));
 
     @Test
     void testCreateMediaRecord(final HttpGraphQlTester tester) throws Exception {
