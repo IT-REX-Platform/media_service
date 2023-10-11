@@ -1,6 +1,8 @@
 package de.unistuttgart.iste.gits.media_service.controller;
 
+import de.unistuttgart.iste.gits.common.exception.NoAccessToCourseException;
 import de.unistuttgart.iste.gits.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.gits.common.user_handling.LoggedInUser.UserRoleInCourse;
 import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
@@ -10,11 +12,12 @@ import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataServ
 import graphql.schema.DataFetchingEnvironment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.graphql.data.method.annotation.*;
 import org.springframework.stereotype.Controller;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,59 +48,45 @@ public class MediaController {
     @QueryMapping
     public List<MediaRecord> mediaRecordsByIds(@Argument final List<UUID> ids, final DataFetchingEnvironment env, @ContextValue final LoggedInUser currentUser) {
         final List<MediaRecord> mediaRecords = mediaService.getMediaRecordsByIds(ids, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
-        final List<UUID> courseIds = mediaRecords.stream().flatMap(mediaRecord -> mediaRecord.getCourseIds().stream()).toList();
 
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, courseIds);
-
-        return mediaRecords;
+        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
     }
 
     @QueryMapping
     public List<MediaRecord> findMediaRecordsByIds(@Argument final List<UUID> ids, final DataFetchingEnvironment env, @ContextValue final LoggedInUser currentUser) {
         final List<MediaRecord> mediaRecords = mediaService.findMediaRecordsByIds(ids, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
-        final List<UUID> courseIds = mediaRecords.stream().filter(Objects::nonNull).flatMap(mediaRecord -> mediaRecord.getCourseIds().stream()).toList();
 
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, courseIds);
-
-        return mediaRecords;
+        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
     }
+
 
     @QueryMapping
     public List<MediaRecord> userMediaRecords(@ContextValue final LoggedInUser currentUser,
                                               final DataFetchingEnvironment env) {
         final List<MediaRecord> mediaRecords = mediaService.getMediaRecordsForUser(currentUser.getId(), uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
-        final List<UUID> courseIds = mediaRecords.stream().flatMap(mediaRecord -> mediaRecord.getCourseIds().stream()).toList();
 
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseIds);
-
-        return mediaRecords;
+        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.TUTOR);
     }
 
     @QueryMapping
     public List<List<MediaRecord>> mediaRecordsByContentIds(@Argument final List<UUID> contentIds,
                                                             final DataFetchingEnvironment env, @ContextValue final LoggedInUser currentUser) {
         final List<List<MediaRecord>> mediaRecordsByContentIds = mediaService.getMediaRecordsByContentIds(contentIds, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
-        final List<MediaRecord> mediaRecords = mediaRecordsByContentIds.stream().flatMap(List::stream).toList();
-        final List<UUID> courseIds = mediaRecords.stream().flatMap(mediaRecord -> mediaRecord.getCourseIds().stream()).toList();
-
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, courseIds);
-        return mediaRecordsByContentIds;
+        return checkAccessForSubLists(currentUser, mediaRecordsByContentIds, UserRoleInCourse.STUDENT);
     }
 
     @QueryMapping
     public List<List<MediaRecord>> mediaRecordsForCourses(@Argument final List<UUID> courseIds, final DataFetchingEnvironment env, @ContextValue final LoggedInUser currentUser) {
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, courseIds);
-        return mediaService.getMediaRecordsForCourses(
-                courseIds,
-                uploadUrlInSelectionSet(env),
-                downloadUrlInSelectionSet(env)
-        );
+        final List<List<MediaRecord>> mediaRecordsByContentIds = mediaService.getMediaRecordsForCourses(courseIds, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
+        return checkAccessForSubLists(currentUser, mediaRecordsByContentIds, UserRoleInCourse.STUDENT);
     }
+
+
 
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
     public MediaRecordProgressData userProgressData(final MediaRecord mediaRecord,
                                                     @ContextValue final LoggedInUser currentUser) {
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, mediaRecord.getCourseIds());
+        checkAccessForMediaRecords(currentUser, List.of(mediaRecord), UserRoleInCourse.STUDENT);
         return mediaUserProgressDataService.getUserProgressData(mediaRecord.getId(), currentUser.getId());
     }
 
@@ -106,6 +95,7 @@ public class MediaController {
                                          @Argument final CreateMediaRecordInput input,
                                          @ContextValue final LoggedInUser currentUser,
                                          final DataFetchingEnvironment env) {
+        validateUserHasGlobalPermission(currentUser, Set.of(LoggedInUser.RealmRole.COURSE_CREATOR));
         if (courseIds != null) {
             validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseIds);
         }
@@ -121,8 +111,7 @@ public class MediaController {
 
     @MutationMapping
     public UUID deleteMediaRecord(@Argument final UUID id, @ContextValue final LoggedInUser currentUser) {
-        final List<UUID> courseIds = mediaService.getMediaRecordById(id).getCourseIds();
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseIds);
+        checkAccessForMediaRecord(currentUser, mediaService.getMediaRecordById(id), UserRoleInCourse.ADMINISTRATOR);
 
         return mediaService.deleteMediaRecord(id);
     }
@@ -132,9 +121,8 @@ public class MediaController {
                                          @Argument final UpdateMediaRecordInput input,
                                          @ContextValue final LoggedInUser currentUser,
                                          final DataFetchingEnvironment env) {
-        if (courseIds != null) {
-            validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseIds);
-        }
+        checkAccessForMediaRecord(currentUser, mediaService.getMediaRecordById(input.getId()), UserRoleInCourse.ADMINISTRATOR);
+
         return mediaService.updateMediaRecord(
                 courseIds,
                 input,
@@ -146,8 +134,8 @@ public class MediaController {
     @MutationMapping
     public MediaRecord logMediaRecordWorkedOn(@Argument final UUID mediaRecordId,
                                               @ContextValue final LoggedInUser currentUser) {
-        final var mediaRecord = mediaService.getMediaRecordById(mediaRecordId);
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, mediaRecord.getCourseIds());
+        final MediaRecord mediaRecord = mediaService.getMediaRecordById(mediaRecordId);
+        checkAccessForMediaRecord(currentUser, mediaRecord, UserRoleInCourse.STUDENT);
         return mediaUserProgressDataService.logMediaRecordWorkedOn(mediaRecordId, currentUser.getId());
     }
 
@@ -155,10 +143,21 @@ public class MediaController {
     public List<MediaRecord> setLinkedMediaRecordsForContent(@Argument final UUID contentId,
                                                              @Argument final List<UUID> mediaRecordIds, @ContextValue final LoggedInUser currentUser) {
         final List<MediaRecord> mediaRecords = mediaService.getMediaRecordsByIds(mediaRecordIds, false, false);
-        final List<UUID> courseIds = mediaRecords.stream().flatMap(mediaRecordEntity -> mediaRecordEntity.getCourseIds().stream()).toList();
-
-        validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseIds);
+        checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.ADMINISTRATOR);
         return mediaService.setLinkedMediaRecordsForContent(contentId, mediaRecordIds);
+    }
+
+    /**
+     * Add the Course to the selected mediaRecords
+     *
+     * @param courseId       of the course
+     * @param mediaRecordIds of the mediaRecords to be changed
+     * @return the updated mediaRecords
+     */
+    @MutationMapping
+    public List<MediaRecord> setMediaRecordsForCourse(@Argument final UUID courseId, @Argument final List<UUID> mediaRecordIds, @ContextValue final LoggedInUser currentUser) {
+        validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+        return mediaService.setMediaRecordsForCourse(courseId, mediaRecordIds);
     }
 
     /**
@@ -182,15 +181,78 @@ public class MediaController {
     }
 
     /**
-     * Add the Course to the selected mediaRecords
+     * Checks if the user has access to a MediaRecord in a List of MediaRecords.
+     * If the user doesn't has access the mediaRecord will be set to null.
      *
-     * @param courseId       of the course
-     * @param mediaRecordIds of the mediaRecords to be changed
-     * @return the updated mediaRecords
+     * @param currentUser  the currently LoggedIn user
+     * @param mediaRecords A list of mediaRecords for which permissions should be checked
+     * @param role         the minimum required role the user needs for access
+     * @return A List of MediaRecords.
      */
-    @MutationMapping
-    public List<MediaRecord> setMediaRecordsForCourse(@Argument final UUID courseId, @Argument final List<UUID> mediaRecordIds, @ContextValue final LoggedInUser currentUser) {
-        validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
-        return mediaService.setMediaRecordsForCourse(courseId, mediaRecordIds);
+    @NotNull
+    private static List<MediaRecord> checkAccessForMediaRecords(final LoggedInUser currentUser, final List<MediaRecord> mediaRecords, final UserRoleInCourse role) {
+        final List<MediaRecord> filteredMediaRecords = new ArrayList<>();
+        for (final MediaRecord mediaRecord : mediaRecords) {
+            if (mediaRecord == null) {
+                filteredMediaRecords.add(null);
+            } else {
+                MediaRecord mediaRecordToAdd = null;
+                final List<UUID> courseIds = mediaRecord.getCourseIds();
+                for (final UUID id : courseIds) {
+                    try {
+                        validateUserHasAccessToCourse(currentUser, role, id);
+                        mediaRecordToAdd = mediaRecord;
+                        break;
+                    } catch (final NoAccessToCourseException ignored) {
+                    }
+                }
+                filteredMediaRecords.add(mediaRecordToAdd);
+            }
+        }
+        return filteredMediaRecords;
     }
+
+    /**
+     * Checks if the user has access to a single mediaRecord.
+     * Throws an exception if the user doesn't have the required permission.
+     *
+     * @param currentUser currently logged-in User
+     * @param mediaRecord the mediaRecord that should be checked
+     * @param role the minimum required role the user needs to perform this action
+     */
+    private static void checkAccessForMediaRecord(final LoggedInUser currentUser, final MediaRecord mediaRecord, final UserRoleInCourse role) {
+        NoAccessToCourseException noAccessToCourseException = null;
+        for (final UUID courseId : mediaRecord.getCourseIds()) {
+            try {
+                validateUserHasAccessToCourse(currentUser, role, courseId);
+                break;
+            } catch (final NoAccessToCourseException exception) {
+                noAccessToCourseException = exception;
+            }
+        }
+        if (noAccessToCourseException != null) {
+            throw noAccessToCourseException;
+        }
+    }
+
+    /**
+     * Checks if the User has access to the mediaRecords of the SubLists
+     *
+     * @param currentUser currently logged-in user
+     * @param ListOfMediaRecordLists the lists that should be checked
+     * @param role the minimum required role for access
+     * @return a List of Lists of Mediarecords
+     */
+    @NotNull
+    private List<List<MediaRecord>> checkAccessForSubLists(final LoggedInUser currentUser, final List<List<MediaRecord>> ListOfMediaRecordLists, final UserRoleInCourse role) {
+        final List<List<MediaRecord>> result = new ArrayList<>();
+
+        for (final List<MediaRecord> mediaRecords : ListOfMediaRecordLists) {
+            final List<MediaRecord> newMediaRecords =  checkAccessForMediaRecords(currentUser, mediaRecords, role);
+            result.add(newMediaRecords);
+        }
+
+        return result;
+    }
+
 }

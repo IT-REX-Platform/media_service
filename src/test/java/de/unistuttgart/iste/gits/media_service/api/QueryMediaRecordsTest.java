@@ -42,7 +42,7 @@ class QueryMediaRecordsTest {
     private final LoggedInUser.CourseMembership courseMembership2 = dummyCourseMembershipBuilder(courseId2);
 
     @InjectCurrentUserHeader
-    private final LoggedInUser currentUser = userWithMembershipsAndRealmRoles(Set.of(LoggedInUser.RealmRole.SUPER_USER), courseMembership1, courseMembership2);
+    private final LoggedInUser currentUser = userWithMembershipsAndRealmRoles(Set.of(LoggedInUser.RealmRole.SUPER_USER), courseMembership1,  courseMembership2);
 
     @Test
     void testQueryAllMediaRecordsEmpty(final GraphQlTester tester) {
