@@ -14,12 +14,12 @@ import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import static de.unistuttgart.iste.gits.common.testutil.TestUsers.userWithMemberships;
+import static de.unistuttgart.iste.gits.media_service.test_util.CourseMembershipUtil.dummyCourseMembershipBuilder;
 import static de.unistuttgart.iste.gits.media_service.test_util.MediaRecordRepositoryUtil.fillRepositoryWithMediaRecordsAndCourseIds;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,20 +34,8 @@ class MutationLinkMediaRecordsWithContentTest {
     private final UUID courseId1 = UUID.randomUUID();
     private final UUID courseId2 = UUID.randomUUID();
 
-    private final LoggedInUser.CourseMembership courseMembership1 =
-            LoggedInUser.CourseMembership.builder()
-                    .courseId(courseId1)
-                    .role(LoggedInUser.UserRoleInCourse.ADMINISTRATOR)
-                    .startDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
-                    .endDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
-                    .build();
-    private final LoggedInUser.CourseMembership courseMembership2 =
-            LoggedInUser.CourseMembership.builder()
-                    .courseId(courseId2)
-                    .role(LoggedInUser.UserRoleInCourse.ADMINISTRATOR)
-                    .startDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
-                    .endDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
-                    .build();
+    private final LoggedInUser.CourseMembership courseMembership1 = dummyCourseMembershipBuilder(courseId1);
+    private final LoggedInUser.CourseMembership courseMembership2 = dummyCourseMembershipBuilder(courseId2);
 
     @InjectCurrentUserHeader
     private final LoggedInUser currentUser = userWithMemberships(courseMembership1, courseMembership2);
