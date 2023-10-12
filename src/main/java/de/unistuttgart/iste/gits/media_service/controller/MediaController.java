@@ -264,15 +264,15 @@ public class MediaController {
      * Checks if the User has access to the mediaRecords of the SubLists
      *
      * @param currentUser            currently logged-in user
-     * @param ListOfMediaRecordLists the lists that should be checked
+     * @param listOfMediaRecordLists the lists that should be checked
      * @param role                   the minimum required role for access
      * @return a List of Lists of Mediarecords
      */
     @NotNull
-    private List<List<MediaRecord>> checkAccessForSubLists(final LoggedInUser currentUser, final List<List<MediaRecord>> ListOfMediaRecordLists, final UserRoleInCourse role) {
+    private List<List<MediaRecord>> checkAccessForSubLists(final LoggedInUser currentUser, final List<List<MediaRecord>> listOfMediaRecordLists, final UserRoleInCourse role) {
         final List<List<MediaRecord>> result = new ArrayList<>();
 
-        for (final List<MediaRecord> mediaRecords : ListOfMediaRecordLists) {
+        for (final List<MediaRecord> mediaRecords : listOfMediaRecordLists) {
             final List<MediaRecord> newMediaRecords = checkAccessForMediaRecordsAndThrowException(currentUser, mediaRecords, role);
             result.add(newMediaRecords);
         }
