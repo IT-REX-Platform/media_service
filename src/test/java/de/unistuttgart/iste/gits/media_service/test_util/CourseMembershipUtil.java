@@ -15,4 +15,13 @@ public class CourseMembershipUtil {
                         .endDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
                         .build();
     }
+
+    public static LoggedInUser.CourseMembership dummyCourseMembershipBuilderWithRole(final UUID courseId, final LoggedInUser.UserRoleInCourse role) {
+        return LoggedInUser.CourseMembership.builder()
+                .courseId(courseId)
+                .role(role)
+                .startDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
+                .endDate(OffsetDateTime.parse("2021-01-01T00:00:00Z"))
+                .build();
+    }
 }

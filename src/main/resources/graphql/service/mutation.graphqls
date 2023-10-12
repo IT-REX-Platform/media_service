@@ -1,19 +1,24 @@
 type Mutation {
     """
     Creates a new media record
+    🔒 The user must have the "course-creator" role to perform this action.
+    🔒 If the mediaRecord is associated with courses the user must be an administrator of all courses or a super-user.
     """
     createMediaRecord(input: CreateMediaRecordInput!): MediaRecord!
     """
     Updates an existing media record with the given UUID
+    🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
     """
     updateMediaRecord(input: UpdateMediaRecordInput!): MediaRecord!
     """
     Deletes the media record with the given UUID
+    🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
     """
     deleteMediaRecord(id: UUID!): UUID!
     """
     For a given MediaContent, sets the linked media records of it to the ones with the given UUIDs.
     This means that for the content, all already linked media records are removed and replaced by the given ones.
+    🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
     """
     setLinkedMediaRecordsForContent(contentId: UUID!, mediaRecordIds: [UUID!]!): [MediaRecord!]!
     """
@@ -23,11 +28,13 @@ type Mutation {
     Possible side effects:
     When all media records of a content have been worked on by a user,
     a user-progress event is emitted for the content.
+    🔒 If the mediaRecord is associated with courses the user must be a member of at least one of the courses.
     """
     logMediaRecordWorkedOn(mediaRecordId: UUID!): MediaRecord!
 
     """
     Add the MediaRecords with the given UUIDS to the Course with the given UUID.
+    🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
     """
     setMediaRecordsForCourse(courseId: UUID!, mediaRecordIds: [UUID!]!): [MediaRecord!]!
 }

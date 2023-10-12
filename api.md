@@ -3,23 +3,23 @@
 <details>
   <summary><strong>Table of Contents</strong></summary>
 
-* [Query](#query)
-* [Mutation](#mutation)
-* [Objects](#objects)
+  * [Query](#query)
+  * [Mutation](#mutation)
+  * [Objects](#objects)
     * [MediaRecord](#mediarecord)
     * [MediaRecordProgressData](#mediarecordprogressdata)
     * [PaginationInfo](#paginationinfo)
-* [Inputs](#inputs)
+  * [Inputs](#inputs)
     * [CreateMediaRecordInput](#createmediarecordinput)
     * [DateTimeFilter](#datetimefilter)
     * [IntFilter](#intfilter)
     * [Pagination](#pagination)
     * [StringFilter](#stringfilter)
     * [UpdateMediaRecordInput](#updatemediarecordinput)
-* [Enums](#enums)
+  * [Enums](#enums)
     * [MediaType](#mediatype)
     * [SortDirection](#sortdirection)
-* [Scalars](#scalars)
+  * [Scalars](#scalars)
     * [Boolean](#boolean)
     * [Date](#date)
     * [DateTime](#datetime)
@@ -33,7 +33,6 @@
 </details>
 
 ## Query
-
 <table>
 <thead>
 <tr>
@@ -52,6 +51,7 @@
 
 Returns the media records with the given IDs. Throws an error if a MediaRecord corresponding to a given ID
 cannot be found.
+🔒 If the mediaRecord is associated with coursed the user must be a member of at least one of the courses.
 
 </td>
 </tr>
@@ -68,6 +68,7 @@ cannot be found.
 
 Like mediaRecordsByIds() returns the media records with the given IDs, but instead of throwing an error if an ID
 cannot be found, it instead returns NULL for that media record.
+🔒 If the mediaRecord is associated with coursed the user must be a member of at least one of the courses.
 
 </td>
 </tr>
@@ -83,6 +84,7 @@ cannot be found, it instead returns NULL for that media record.
 
 
 Returns all media records of the system.
+🔒 The user must be a super-user, otherwise an exception is thrown.
 
 <p>⚠️ <strong>DEPRECATED</strong></p>
 <blockquote>
@@ -99,6 +101,7 @@ In production there should probably be no way to get all media records of the sy
 
 
 Returns all media records which the current user created.
+🔒 If the mediaRecord is associated with coursed the user must be a member of at least one of the courses.
 
 </td>
 </tr>
@@ -110,6 +113,7 @@ Returns all media records which the current user created.
 
 Returns the media records associated the given content IDs as a list of lists where each sublist contains
 the media records associated with the content ID at the same index in the input list
+🔒 If the mediaRecord is associated with coursed the user must be a member of at least one of the courses.
 
 </td>
 </tr>
@@ -118,11 +122,26 @@ the media records associated with the content ID at the same index in the input 
 <td valign="top">[<a href="#uuid">UUID</a>!]!</td>
 <td></td>
 </tr>
+<tr>
+<td colspan="2" valign="top"><strong>mediaRecordsForCourses</strong></td>
+<td valign="top">[[<a href="#mediarecord">MediaRecord</a>!]!]!</td>
+<td>
+
+
+Returns all media records for the given CourseIds
+🔒 If the mediaRecord is associated with coursed the user must be a member of at least one of the courses.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">courseIds</td>
+<td valign="top">[<a href="#uuid">UUID</a>!]!</td>
+<td></td>
+</tr>
 </tbody>
 </table>
 
 ## Mutation
-
 <table>
 <thead>
 <tr>
@@ -140,6 +159,8 @@ the media records associated with the content ID at the same index in the input 
 
 
 Creates a new media record
+🔒 The user must have the "course-creator" role to perform this action.
+🔒 If the mediaRecord is associated with courses the user must be an administrator of all courses or a super-user.
 
 </td>
 </tr>
@@ -155,6 +176,7 @@ Creates a new media record
 
 
 Updates an existing media record with the given UUID
+🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
 
 </td>
 </tr>
@@ -170,6 +192,7 @@ Updates an existing media record with the given UUID
 
 
 Deletes the media record with the given UUID
+🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
 
 </td>
 </tr>
@@ -179,12 +202,14 @@ Deletes the media record with the given UUID
 <td></td>
 </tr>
 <tr>
-<td colspan="2" valign="top"><strong>linkMediaRecordsWithContent</strong></td>
+<td colspan="2" valign="top"><strong>setLinkedMediaRecordsForContent</strong></td>
 <td valign="top">[<a href="#mediarecord">MediaRecord</a>!]!</td>
 <td>
 
 
-Allows multiple media records to be linked/added to a content.
+For a given MediaContent, sets the linked media records of it to the ones with the given UUIDs.
+This means that for the content, all already linked media records are removed and replaced by the given ones.
+🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
 
 </td>
 </tr>
@@ -203,18 +228,41 @@ Allows multiple media records to be linked/added to a content.
 <td valign="top"><a href="#mediarecord">MediaRecord</a>!</td>
 <td>
 
+
     Logs that a media has been worked on by the current user.
     See https://gits-enpro.readthedocs.io/en/latest/dev-manuals/gamification/userProgress.html
 
     Possible side effects:
     When all media records of a content have been worked on by a user,
     a user-progress event is emitted for the content.
+    🔒 If the mediaRecord is associated with courses the user must be a member of at least one of the courses.
 
 </td>
 </tr>
 <tr>
 <td colspan="2" align="right" valign="top">mediaRecordId</td>
 <td valign="top"><a href="#uuid">UUID</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>setMediaRecordsForCourse</strong></td>
+<td valign="top">[<a href="#mediarecord">MediaRecord</a>!]!</td>
+<td>
+
+
+Add the MediaRecords with the given UUIDS to the Course with the given UUID.
+🔒 If the mediaRecord is associated with courses the user must be an administrator of at least one of the courses.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">courseId</td>
+<td valign="top"><a href="#uuid">UUID</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">mediaRecordIds</td>
+<td valign="top">[<a href="#uuid">UUID</a>!]!</td>
 <td></td>
 </tr>
 </tbody>
@@ -224,10 +272,10 @@ Allows multiple media records to be linked/added to a content.
 
 ### MediaRecord
 
-schema file of the microservice
-defines data types, queries and mutations
-this can be done in a separate files as long as they are in this folder and
-end with .graphqls
+ schema file of the microservice
+ defines data types, queries and mutations
+ this can be done in a separate files as long as they are in this folder and
+ end with .graphqls
 
 <table>
 <thead>
@@ -246,6 +294,16 @@ end with .graphqls
 
 
 ID of the media record
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>courseIds</strong></td>
+<td valign="top">[<a href="#uuid">UUID</a>!]!</td>
+<td>
+
+
+Ids of the courses this MediaRecord is associated with
 
 </td>
 </tr>
@@ -360,6 +418,7 @@ This is null if the medium has not been worked on by the user.
 
 ### PaginationInfo
 
+
 Return type for information about paginated results.
 
 <table>
@@ -473,6 +532,7 @@ IDs of the MediaContents this media record is associated with
 
 ### DateTimeFilter
 
+
 Filter for date values.
 If multiple filters are specified, they are combined with AND.
 
@@ -509,6 +569,7 @@ If specified, filters for dates before the specified value.
 </table>
 
 ### IntFilter
+
 
 Filter for integer values.
 If multiple filters are specified, they are combined with AND.
@@ -557,6 +618,7 @@ If specified, filters for values less than to the specified value.
 
 ### Pagination
 
+
 Specifies the page size and page number for paginated results.
 
 <table>
@@ -595,6 +657,7 @@ The number of elements per page.
 </table>
 
 ### StringFilter
+
 
 Filter for string values.
 If multiple filters are specified, they are combined with AND.
@@ -699,6 +762,7 @@ IDs of the MediaContents this media record is associated with
 
 ### MediaType
 
+
 The type of the media record
 
 <table>
@@ -735,6 +799,7 @@ The type of the media record
 </table>
 
 ### SortDirection
+
 
 Specifies the sort direction, either ascending or descending.
 

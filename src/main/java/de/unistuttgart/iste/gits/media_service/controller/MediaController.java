@@ -65,7 +65,7 @@ public class MediaController {
                                               final DataFetchingEnvironment env) {
         final List<MediaRecord> mediaRecords = mediaService.getMediaRecordsForUser(currentUser.getId(), uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
 
-        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.TUTOR);
+        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
     }
 
     @QueryMapping
@@ -80,7 +80,6 @@ public class MediaController {
         final List<List<MediaRecord>> mediaRecordsByContentIds = mediaService.getMediaRecordsForCourses(courseIds, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
         return checkAccessForSubLists(currentUser, mediaRecordsByContentIds, UserRoleInCourse.STUDENT);
     }
-
 
 
     @SchemaMapping(typeName = "MediaRecord", field = "userProgressData")
@@ -198,12 +197,17 @@ public class MediaController {
             } else {
                 MediaRecord mediaRecordToAdd = null;
                 final List<UUID> courseIds = mediaRecord.getCourseIds();
-                for (final UUID id : courseIds) {
-                    try {
-                        validateUserHasAccessToCourse(currentUser, role, id);
-                        mediaRecordToAdd = mediaRecord;
-                        break;
-                    } catch (final NoAccessToCourseException ignored) {
+                if (courseIds.isEmpty()) {
+                    mediaRecordToAdd = mediaRecord;
+                } else {
+                    for (final UUID id : courseIds) {
+                        try {
+                            validateUserHasAccessToCourse(currentUser, role, id);
+                            mediaRecordToAdd = mediaRecord;
+                            break;
+                        } catch (final NoAccessToCourseException ignored) {
+
+                        }
                     }
                 }
                 filteredMediaRecords.add(mediaRecordToAdd);
@@ -218,10 +222,13 @@ public class MediaController {
      *
      * @param currentUser currently logged-in User
      * @param mediaRecord the mediaRecord that should be checked
-     * @param role the minimum required role the user needs to perform this action
+     * @param role        the minimum required role the user needs to perform this action
      */
     private static void checkAccessForMediaRecord(final LoggedInUser currentUser, final MediaRecord mediaRecord, final UserRoleInCourse role) {
         NoAccessToCourseException noAccessToCourseException = null;
+        if (mediaRecord.getCourseIds().isEmpty()) {
+            return;
+        }
         for (final UUID courseId : mediaRecord.getCourseIds()) {
             try {
                 validateUserHasAccessToCourse(currentUser, role, courseId);
@@ -238,9 +245,9 @@ public class MediaController {
     /**
      * Checks if the User has access to the mediaRecords of the SubLists
      *
-     * @param currentUser currently logged-in user
+     * @param currentUser            currently logged-in user
      * @param ListOfMediaRecordLists the lists that should be checked
-     * @param role the minimum required role for access
+     * @param role                   the minimum required role for access
      * @return a List of Lists of Mediarecords
      */
     @NotNull
@@ -248,7 +255,7 @@ public class MediaController {
         final List<List<MediaRecord>> result = new ArrayList<>();
 
         for (final List<MediaRecord> mediaRecords : ListOfMediaRecordLists) {
-            final List<MediaRecord> newMediaRecords =  checkAccessForMediaRecords(currentUser, mediaRecords, role);
+            final List<MediaRecord> newMediaRecords = checkAccessForMediaRecords(currentUser, mediaRecords, role);
             result.add(newMediaRecords);
         }
 
