@@ -33,4 +33,9 @@ type Query {
     🔒 If the mediaRecord is associated with coursed the user must be a member of at least one of the courses.
     """
     mediaRecordsForCourses(courseIds: [UUID!]!): [[MediaRecord!]!]!
+
+    """
+    Returns all media records which were created by the users.
+    """
+    mediaRecordsForUsers(userIds: [UUID!]!): [MediaRecord!]!
 }

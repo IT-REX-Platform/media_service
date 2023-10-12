@@ -146,6 +146,27 @@ public class MediaService {
     }
 
     /**
+     * Gets all media records for which the specified users are the creator.
+     *
+     * @param userIds list of userIds to get the media records for.
+     * @param generateUploadUrls if the uploadUrl should be generated.
+     * @param generateDownloadUrls if the downloadUrl should be generated.
+     * @return a list of the users' media records
+     */
+    public List<MediaRecord> getMediaRecordsForUsers(final List<UUID> userIds, final boolean generateUploadUrls, final boolean generateDownloadUrls) {
+        final List<MediaRecordEntity> records = new ArrayList<>();
+
+        for (final UUID userId: userIds) {
+            records.addAll(repository.findMediaRecordEntitiesByCreatorId(userId));
+        }
+        return fillMediaRecordsUrlsIfRequested(
+                records.stream().map(x -> modelMapper.map(x, MediaRecord.class)).toList(),
+                generateUploadUrls,
+                generateDownloadUrls
+        );
+    }
+
+    /**
      * Gets all media records that are associated with the passed content ids.
      *
      * @param contentIds           The content ids to get the media records for.
@@ -642,5 +663,6 @@ public class MediaService {
         }
         log.info("Cleanup completed");
     }
+
 
 }

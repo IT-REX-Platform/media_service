@@ -69,6 +69,11 @@ public class MediaController {
     }
 
     @QueryMapping
+    public List<MediaRecord> mediaRecordsForUsers(final List<UUID> userIds, final DataFetchingEnvironment env) {
+        return  mediaService.getMediaRecordsForUsers(userIds, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
+    }
+
+    @QueryMapping
     public List<List<MediaRecord>> mediaRecordsByContentIds(@Argument final List<UUID> contentIds,
                                                             final DataFetchingEnvironment env, @ContextValue final LoggedInUser currentUser) {
         final List<List<MediaRecord>> mediaRecordsByContentIds = mediaService.getMediaRecordsByContentIds(contentIds, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
