@@ -94,8 +94,8 @@ public class MediaController {
                                          @Argument final CreateMediaRecordInput input,
                                          @ContextValue final LoggedInUser currentUser,
                                          final DataFetchingEnvironment env) {
-        validateUserHasGlobalPermission(currentUser, Set.of(LoggedInUser.RealmRole.COURSE_CREATOR));
-        if (courseIds != null) {
+
+        if (courseIds != null && !courseIds.isEmpty()) {
             validateUserHasAccessToCourses(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseIds);
         }
 
@@ -225,7 +225,6 @@ public class MediaController {
      * @param role        the minimum required role the user needs to perform this action
      */
     private static void checkAccessForMediaRecord(final LoggedInUser currentUser, final MediaRecord mediaRecord, final UserRoleInCourse role) {
-        NoAccessToCourseException noAccessToCourseException = null;
         if (mediaRecord.getCourseIds().isEmpty()) {
             return;
         }
@@ -234,11 +233,8 @@ public class MediaController {
                 validateUserHasAccessToCourse(currentUser, role, courseId);
                 break;
             } catch (final NoAccessToCourseException exception) {
-                noAccessToCourseException = exception;
+               throw exception;
             }
-        }
-        if (noAccessToCourseException != null) {
-            throw noAccessToCourseException;
         }
     }
 
