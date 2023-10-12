@@ -195,25 +195,31 @@ public class MediaController {
             if (mediaRecord == null) {
                 filteredMediaRecords.add(null);
             } else {
-                MediaRecord mediaRecordToAdd = null;
+                final MediaRecord mediaRecordToAdd;
                 final List<UUID> courseIds = mediaRecord.getCourseIds();
                 if (courseIds.isEmpty()) {
                     mediaRecordToAdd = mediaRecord;
                 } else {
-                    for (final UUID id : courseIds) {
-                        try {
-                            validateUserHasAccessToCourse(currentUser, role, id);
-                            mediaRecordToAdd = mediaRecord;
-                            break;
-                        } catch (final NoAccessToCourseException ignored) {
-
-                        }
-                    }
+                    mediaRecordToAdd = getMediaRecordToAdd(currentUser, role, mediaRecord, courseIds);
                 }
                 filteredMediaRecords.add(mediaRecordToAdd);
             }
         }
         return filteredMediaRecords;
+    }
+
+    private static MediaRecord getMediaRecordToAdd(final LoggedInUser currentUser, final UserRoleInCourse role, final MediaRecord mediaRecord, final List<UUID> courseIds) {
+        MediaRecord mediaRecordToAdd = null;
+        for (final UUID id : courseIds) {
+            try {
+                validateUserHasAccessToCourse(currentUser, role, id);
+                mediaRecordToAdd = mediaRecord;
+                break;
+            } catch (final NoAccessToCourseException ignored) {
+
+            }
+        }
+        return mediaRecordToAdd;
     }
 
     /**
