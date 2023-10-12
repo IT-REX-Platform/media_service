@@ -7,6 +7,7 @@ import de.unistuttgart.iste.gits.generated.dto.CreateMediaRecordInput;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecord;
 import de.unistuttgart.iste.gits.generated.dto.MediaRecordProgressData;
 import de.unistuttgart.iste.gits.generated.dto.UpdateMediaRecordInput;
+import de.unistuttgart.iste.gits.media_service.exception.NoAccessToMediaRecord;
 import de.unistuttgart.iste.gits.media_service.service.MediaService;
 import de.unistuttgart.iste.gits.media_service.service.MediaUserProgressDataService;
 import graphql.schema.DataFetchingEnvironment;
@@ -49,7 +50,7 @@ public class MediaController {
     public List<MediaRecord> mediaRecordsByIds(@Argument final List<UUID> ids, final DataFetchingEnvironment env, @ContextValue final LoggedInUser currentUser) {
         final List<MediaRecord> mediaRecords = mediaService.getMediaRecordsByIds(ids, uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
 
-        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
+        return checkAccessForMediaRecordsAndThrowException(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
     }
 
     @QueryMapping
@@ -65,7 +66,7 @@ public class MediaController {
                                               final DataFetchingEnvironment env) {
         final List<MediaRecord> mediaRecords = mediaService.getMediaRecordsForUser(currentUser.getId(), uploadUrlInSelectionSet(env), downloadUrlInSelectionSet(env));
 
-        return checkAccessForMediaRecords(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
+        return checkAccessForMediaRecordsAndThrowException(currentUser, mediaRecords, UserRoleInCourse.STUDENT);
     }
 
     @QueryMapping
@@ -227,6 +228,16 @@ public class MediaController {
         return mediaRecordToAdd;
     }
 
+    private static List<MediaRecord> checkAccessForMediaRecordsAndThrowException(final LoggedInUser currentUser, final List<MediaRecord> mediaRecords, final UserRoleInCourse role) {
+        final List<MediaRecord> recordList = checkAccessForMediaRecords(currentUser, mediaRecords, role);
+
+        if (recordList.contains(null)) {
+            throw new NoAccessToMediaRecord();
+        }
+
+        return recordList;
+    }
+
     /**
      * Checks if the user has access to a single mediaRecord.
      * Throws an exception if the user doesn't have the required permission.
@@ -262,7 +273,7 @@ public class MediaController {
         final List<List<MediaRecord>> result = new ArrayList<>();
 
         for (final List<MediaRecord> mediaRecords : ListOfMediaRecordLists) {
-            final List<MediaRecord> newMediaRecords = checkAccessForMediaRecords(currentUser, mediaRecords, role);
+            final List<MediaRecord> newMediaRecords = checkAccessForMediaRecordsAndThrowException(currentUser, mediaRecords, role);
             result.add(newMediaRecords);
         }
 
