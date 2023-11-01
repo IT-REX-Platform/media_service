@@ -11,7 +11,6 @@ The Media Service is a component designed to fulfill the following functions wit
 
 
 
-=======
 ## Media Service
 
 ## Environment variables
